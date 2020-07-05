@@ -1,9 +1,18 @@
 const assert = require('assert');
 const mock = require('mockjs');
 const _ = require('lodash');
+const program = require('commander')
 
 const { count, getDate } = require('..')
 const { connect, table, select, insert, update, SQL, any, variant, fn, sp, exists, SORT_DIRECTION, input, output } = require('lubejs');
+
+program.option('-h, --host <host>', 'server name')
+program.option('-u, --user <user>', 'server user')
+program.option('-p, --password <password>', 'server pasword')
+program.option('-P, --port <port>', 'server port')
+program.option('-d, --database <database>', 'database name')
+
+program.parse(process.argv)
 
 describe('MSSQL TESTS', function () {
   this.timeout(0);
@@ -11,12 +20,13 @@ describe('MSSQL TESTS', function () {
   const driver = require('..')
   const dbConfig = {
     driver,
-    user: 'sa',
-    password: '*****',
-    host: 'localhost',
+    user: program.user || 'sa',
+    password: program.password,
+    host: program.host || 'localhost',
     // instance: 'MSSQLSERVER',
-    database: 'TEST',
-    port: 1433,
+    database: program.database || 'TEST',
+    trustedConnection: program.user ? false : true,
+    port: program.port && parseInt(program.port) || 1433,
     // 最小值
     poolMin: 0,
     // 最大值
@@ -28,6 +38,8 @@ describe('MSSQL TESTS', function () {
     // 请求超时时间
     requestTimeout: 15000
   };
+
+  console.log(dbConfig)
 
   const sqlLogs = true;
 

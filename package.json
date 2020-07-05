@@ -7,7 +7,7 @@
     "lib": "lib"
   },
   "scripts": {
-    "test": "mocha test"
+    "test": "mocha ./test"
   },
   "keywords": [
     "mssql",
@@ -24,6 +24,7 @@
     "mssql": "^6.2.0"
   },
   "devDependencies": {
+    "commander": "^5.1.0",
     "lubejs": "^1.0.0-beta01",
     "mocha": "^8.0.1",
     "mockjs": "^1.1.0"
