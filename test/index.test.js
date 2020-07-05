@@ -12,11 +12,11 @@ describe('MSSQL TESTS', function () {
   const dbConfig = {
     driver,
     user: 'sa',
-    password: '!crgd-2019',
-    host: 'jover.wicp.net',
+    password: '*****',
+    host: 'localhost',
     // instance: 'MSSQLSERVER',
     database: 'TEST',
-    port: 2433,
+    port: 1433,
     // 最小值
     poolMin: 0,
     // 最大值
