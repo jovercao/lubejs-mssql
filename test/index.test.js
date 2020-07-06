@@ -40,8 +40,6 @@ describe('MSSQL TESTS', function () {
     requestTimeout: 15000
   };
 
-  console.log(dbConfig)
-
   const sqlLogs = true;
 
   before(async function () {
@@ -77,7 +75,6 @@ describe('MSSQL TESTS', function () {
       return @i
     END`);
 
-    console.log('create table items')
     const createTable = `create table Items (
       FId INT IDENTITY(1,1) PRIMARY KEY,
       FName NVARCHAR(120),
@@ -90,8 +87,6 @@ describe('MSSQL TESTS', function () {
   });
 
   after(async function () {
-
-    console.log('drop table Items');
     await db.query('drop table Items');
     await db.query('drop function dosomething');
     await db.query('drop PROC doProc');
@@ -103,7 +98,6 @@ describe('MSSQL TESTS', function () {
       p1: 'name',
       p2: '100'
     });
-    console.log(rs1);
     assert(rs1.rows[0].Name === 'name');
   });
 
@@ -251,7 +245,6 @@ describe('MSSQL TESTS', function () {
       .orderBy(a.fid.asc());
 
     let { rows } = await db.query(sql);
-    console.log(rows[0]);
     assert(_.isDate(rows[0].Now), '不是日期类型');
     assert(rows[0].aid === 51, '数据不是预期结果');
     assert(['男', '女'].includes(rows[0]['性别']), '性别不正确');
@@ -308,7 +301,6 @@ describe('MSSQL TESTS', function () {
         throw new Error('事务错误回滚测试');
       });
     } catch (ex) {
-      console.log(ex)
       assert(ex.message === '事务错误回滚测试');
     }
 
@@ -343,7 +335,6 @@ describe('MSSQL TESTS', function () {
     const sql = execute('doProc', [1, p2]);
     const res = await db.query(sql);
 
-    console.log(res);
     assert(res.returnValue === 1);
     assert(p2.value === 'hello world');
   });
