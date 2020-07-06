@@ -4,7 +4,8 @@ const _ = require('lodash');
 const program = require('commander')
 
 const { count, getDate } = require('..')
-const { connect, table, select, insert, update, SQL, any, variant, fn, sp, exists, SORT_DIRECTION, input, output } = require('lubejs');
+const { connect, table, select, insert, update, SQL, any, execute,
+  variant, fn, sp, exists, SORT_DIRECTION, input, output } = require('../../lubejs');
 
 program.option('-h, --host <host>', 'server name')
 program.option('-u, --user <user>', 'server user')
@@ -227,7 +228,7 @@ describe('MSSQL TESTS', function () {
     assert.strictEqual(rows[0].FSex, false);
   });
 
-  it('select statement -> multitest', async function () {
+  it('db.query(sql: Select) -> GroupBy', async function () {
     const a = table('Items').as('a');
     const b = table('Items').as('b');
 
@@ -264,7 +265,7 @@ describe('MSSQL TESTS', function () {
     assert(rows[0].count > 0);
   });
 
-  it('select statement -> join', async function () {
+  it('db.query(sql: Select)', async function () {
     const o = table('sysobjects').as('o');
     const p = table('sys', 'extended_properties').as('p');
     const sql = select(
@@ -282,12 +283,12 @@ describe('MSSQL TESTS', function () {
     assert(rows.length > 0);
   });
 
-  it('select all', async () => {
+  it('db.select(table)', async () => {
     const rows = await db.select('Items');
     assert(_.isArray(rows));
   });
 
-  it('trans -> rollback', async () => {
+  it('db.trans -> rollback', async () => {
     const srcRows = await db.select('Items');
     try {
       await db.trans(async (executor, abort) => {
@@ -315,7 +316,7 @@ describe('MSSQL TESTS', function () {
     assert.deepStrictEqual(rows2, srcRows);
   });
 
-  it('trans -> commit', async () => {
+  it('db.trans -> commit', async () => {
     await db.trans(async (executor) => {
       await executor.query('SET identity_insert [Items] ON');
       const lines = await executor.insert('Items', {
@@ -332,14 +333,14 @@ describe('MSSQL TESTS', function () {
     assert(rows.length > 0);
   });
 
-  it('delete', async function () {
+  it('db.delete', async function () {
     const lines = await db.delete('Items');
     assert(lines >= 1);
   });
 
-  it('sp(name)(...params)', async function () {
+  it('db.query(sql: Execute)', async function () {
     const p2 = output('o', String);
-    const sql = sp('doProc')(1, p2);
+    const sql = execute('doProc', [1, p2]);
     const res = await db.query(sql);
 
     console.log(res);

@@ -1,4 +1,4 @@
-import { Raw, ConnectOptions, Provider, UnsureExpressions, Invoke, Variant } from 'lubejs'
+import { Raw, ConnectOptions, Provider, UnsureExpressions, Invoke, Variant } from '../../lubejs'
 
 /**
  * 连接数据库并返回含数据库连接池的Provider
