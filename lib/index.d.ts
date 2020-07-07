@@ -1,4 +1,4 @@
-import { Raw, ConnectOptions, Provider, UnsureExpressions, Invoke, Variant } from '../../lubejs'
+import { Raw, ConnectOptions, Provider, UnsureExpression, Invoke, Variant } from '../../lubejs/lib/lube'
 
 /**
  * 连接数据库并返回含数据库连接池的Provider
@@ -8,7 +8,7 @@ export function connect(config: ConnectOptions): Promise<Provider>
 
 export default connect
 
-type UnaryParameterInvoke = (expr: UnsureExpressions) => Invoke
+type UnaryParameterInvoke = (expr: UnsureExpression) => Invoke
 type NoneParameterInvoke = () => Invoke
 type DatePart = Raw
 
@@ -22,7 +22,7 @@ export const FUNCTIONS: {
   max: UnaryParameterInvoke,
   min: UnaryParameterInvoke,
   exp: UnaryParameterInvoke,
-  round: (expr: UnsureExpressions, precision: UnsureExpressions) => Invoke,
+  round: (expr: UnsureExpression, precision: UnsureExpression) => Invoke,
   floor: UnaryParameterInvoke,
   sqrt: UnaryParameterInvoke,
   sine: UnaryParameterInvoke,
@@ -32,7 +32,7 @@ export const FUNCTIONS: {
   square: UnaryParameterInvoke,
   dateName: UnaryParameterInvoke,
   datePart: UnaryParameterInvoke,
-  isNull: (value: UnsureExpressions, default_value: UnsureExpressions) => Invoke,
+  isNull: (value: UnsureExpression, default_value: UnsureExpression) => Invoke,
   len: UnaryParameterInvoke,
   getDate: NoneParameterInvoke,
   getUtcDate: NoneParameterInvoke,
@@ -40,29 +40,29 @@ export const FUNCTIONS: {
   month: NoneParameterInvoke,
   year: NoneParameterInvoke,
   day: NoneParameterInvoke,
-  dateAdd: (part: DatePart, increment: UnsureExpressions, date: UnsureExpressions) => Invoke,
-  dateDiff: (part: DatePart, date: UnsureExpressions, value: UnsureExpressions) => Invoke,
+  dateAdd: (part: DatePart, increment: UnsureExpression, date: UnsureExpression) => Invoke,
+  dateDiff: (part: DatePart, date: UnsureExpression, value: UnsureExpression) => Invoke,
   sysDateTime: NoneParameterInvoke,
   sysUtcDateTime: NoneParameterInvoke,
-  charIndex: (pattern: UnsureExpressions, str: UnsureExpressions, startIndex?: UnsureExpressions) => Invoke,
+  charIndex: (pattern: UnsureExpression, str: UnsureExpression, startIndex?: UnsureExpression) => Invoke,
   left: UnaryParameterInvoke,
   right: UnaryParameterInvoke,
   str: UnaryParameterInvoke,
-  substring: (expr: UnsureExpressions, start: UnsureExpressions, length: UnsureExpressions) => Invoke,
+  substring: (expr: UnsureExpression, start: UnsureExpression, length: UnsureExpression) => Invoke,
   ascii: UnaryParameterInvoke,
   char: UnaryParameterInvoke,
   unicode: UnaryParameterInvoke,
   nchar: UnaryParameterInvoke,
-  patIndex: (pattern: UnsureExpressions, str: UnsureExpressions) => Invoke,
+  patIndex: (pattern: UnsureExpression, str: UnsureExpression) => Invoke,
   ltrim: UnaryParameterInvoke,
   rtrim: UnaryParameterInvoke,
   space: UnaryParameterInvoke,
   reverse: UnaryParameterInvoke,
-  stuff: (expression_to_be_searched: UnsureExpressions, starting_position: UnsureExpressions, number_of_chars: UnsureExpressions, replacement_expression: UnsureExpressions) => Invoke,
+  stuff: (expression_to_be_searched: UnsureExpression, starting_position: UnsureExpression, number_of_chars: UnsureExpression, replacement_expression: UnsureExpression) => Invoke,
   quotedName: UnaryParameterInvoke,
   lower: UnaryParameterInvoke,
   upper: UnaryParameterInvoke,
-  replace: (expression_to_be_searched: UnsureExpressions, search_expression: UnsureExpressions, replacement_expression: UnsureExpressions) => Invoke,
+  replace: (expression_to_be_searched: UnsureExpression, search_expression: UnsureExpression, replacement_expression: UnsureExpression) => Invoke,
   rand: NoneParameterInvoke,
   abs: UnaryParameterInvoke,
   acos: UnaryParameterInvoke,
@@ -93,7 +93,7 @@ export const sum: UnaryParameterInvoke
 export const max: UnaryParameterInvoke
 export const min: UnaryParameterInvoke
 export const exp: UnaryParameterInvoke
-export const round: (expr: UnsureExpressions, precision: UnsureExpressions) => Invoke
+export const round: (expr: UnsureExpression, precision: UnsureExpression) => Invoke
 export const floor: UnaryParameterInvoke
 export const sqrt: UnaryParameterInvoke
 export const sine: UnaryParameterInvoke
@@ -103,7 +103,7 @@ export const stdev: UnaryParameterInvoke
 export const square: UnaryParameterInvoke
 export const dateName: UnaryParameterInvoke
 export const datePart: UnaryParameterInvoke
-export const isNull: (value: UnsureExpressions, default_value: UnsureExpressions) => Invoke
+export const isNull: (value: UnsureExpression, default_value: UnsureExpression) => Invoke
 export const len: UnaryParameterInvoke
 export const getDate: NoneParameterInvoke
 export const getUtcDate: NoneParameterInvoke
@@ -111,29 +111,29 @@ export const date: NoneParameterInvoke
 export const month: NoneParameterInvoke
 export const year: NoneParameterInvoke
 export const day: NoneParameterInvoke
-export const dateAdd: (part: DatePart, increment: UnsureExpressions, date: UnsureExpressions) => Invoke
-export const dateDiff: (part: DatePart, date: UnsureExpressions, value: UnsureExpressions) => Invoke
+export const dateAdd: (part: DatePart, increment: UnsureExpression, date: UnsureExpression) => Invoke
+export const dateDiff: (part: DatePart, date: UnsureExpression, value: UnsureExpression) => Invoke
 export const sysDateTime: NoneParameterInvoke
 export const sysUtcDateTime: NoneParameterInvoke
-export const charIndex: (pattern: UnsureExpressions, str: UnsureExpressions, startIndex?: UnsureExpressions) => Invoke
+export const charIndex: (pattern: UnsureExpression, str: UnsureExpression, startIndex?: UnsureExpression) => Invoke
 export const left: UnaryParameterInvoke
 export const right: UnaryParameterInvoke
 export const str: UnaryParameterInvoke
-export const substring: (expr: UnsureExpressions, start: UnsureExpressions, length: UnsureExpressions) => Invoke
+export const substring: (expr: UnsureExpression, start: UnsureExpression, length: UnsureExpression) => Invoke
 export const ascii: UnaryParameterInvoke
 export const char: UnaryParameterInvoke
 export const unicode: UnaryParameterInvoke
 export const nchar: UnaryParameterInvoke
-export const patIndex: (pattern: UnsureExpressions, str: UnsureExpressions) => Invoke
+export const patIndex: (pattern: UnsureExpression, str: UnsureExpression) => Invoke
 export const ltrim: UnaryParameterInvoke
 export const rtrim: UnaryParameterInvoke
 export const space: UnaryParameterInvoke
 export const reverse: UnaryParameterInvoke
-export const stuff: (expression_to_be_searched: UnsureExpressions, starting_position: UnsureExpressions, number_of_chars: UnsureExpressions, replacement_expression: UnsureExpressions) => Invoke
+export const stuff: (expression_to_be_searched: UnsureExpression, starting_position: UnsureExpression, number_of_chars: UnsureExpression, replacement_expression: UnsureExpression) => Invoke
 export const quotedName: UnaryParameterInvoke
 export const lower: UnaryParameterInvoke
 export const upper: UnaryParameterInvoke
-export const replace: (expression_to_be_searched: UnsureExpressions, search_expression: UnsureExpressions, replacement_expression: UnsureExpressions) => Invoke
+export const replace: (expression_to_be_searched: UnsureExpression, search_expression: UnsureExpression, replacement_expression: UnsureExpression) => Invoke
 export const rand: NoneParameterInvoke
 export const abs: UnaryParameterInvoke
 export const acos: UnaryParameterInvoke
