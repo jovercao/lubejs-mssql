@@ -1,19 +1,23 @@
-const assert = require('assert');
-const mock = require('mockjs');
-const _ = require('lodash');
-const program = require('commander')
+import * as assert from 'assert';
+import * as mock from 'mockjs';
+import * as _ from 'lodash';
+import * as program from 'commander'
 
-const { count, getDate } = require('..')
-const { connect, table, select, insert, update, SQL, any, execute,
-  variant, fn, sp, exists, SORT_DIRECTION, input, output } = require('../../lubejs');
+import { count, getDate } from '..'
+import {
+  connect, table, select, insert, update, SQL, any, execute,
+  variant, fn, sp, exists, SORT_DIRECTION, input, output
+} from 'lubejs';
 
 program.option('-h, --host <host>', 'server name')
-program.option('-u, --user <user>', 'server user')
-program.option('-p, --password <password>', 'server pasword')
-program.option('-P, --port <port>', 'server port')
-program.option('-d, --database <database>', 'database name')
+  .option('-u, --user <user>', 'server user')
+  .option('-p, --password <password>', 'server pasword')
+  .option('-P, --port <port>', 'server port')
+  .option('-d, --database <database>', 'database name')
+  .option('-r, --require <module>', 'load modules')
+  .option('-r, --extensions <list>', 'load files')
 
-program.parse(process.argv)
+program.parse(process.argv, { from: 'user' })
 
 describe('MSSQL TESTS', function () {
   this.timeout(0);
@@ -101,7 +105,7 @@ describe('MSSQL TESTS', function () {
     assert(rs1.rows[0].Name === 'name');
   });
 
-  it ('db.query(sqls: string[], ...params: JsConstant[])', async function() {
+  it('db.query(sqls: string[], ...params: JsConstant[])', async function () {
     const name = 'Jover';
     const rs2 = await db.query`select [Name] = ${name}, [Age] = ${19}`;
     assert(rs2.rows[0].Name === name);
@@ -266,12 +270,12 @@ describe('MSSQL TESTS', function () {
       o.$name,
       p.$value.as('desc'),
       input('inputValue', 1000).as('inputValue'))
-    .from(o)
-    .leftJoin(p, p.major_id.eq(o.id)
-      .and(p.minor_id.eq(0))
-      .and(p.class.eq(1))
-      .and(p.$name.eq('MS_Description')))
-    .where(o.$type.in('U', 'V'));
+      .from(o)
+      .leftJoin(p, p.major_id.eq(o.id)
+        .and(p.minor_id.eq(0))
+        .and(p.class.eq(1))
+        .and(p.$name.eq('MS_Description')))
+      .where(o.$type.in('U', 'V'));
     const { rows } = await db.query(sql);
     assert(rows.length > 0);
   });

@@ -1,10 +1,10 @@
-import { Raw, ConnectOptions, Provider, UnsureExpression, Invoke, Variant } from '../../lubejs/lib/lube'
+import { Raw, ConnectOptions, IDbProvider, UnsureExpression, Invoke, Variant } from '../../lubejs/lib/lube'
 
 /**
  * 连接数据库并返回含数据库连接池的Provider
  * @param config 连接选项
  */
-export function connect(config: ConnectOptions): Promise<Provider>
+export function connect(config: ConnectOptions): Promise<IDbProvider>
 
 export default connect
 
@@ -23,13 +23,8 @@ export const FUNCTIONS: {
   min: UnaryParameterInvoke,
   exp: UnaryParameterInvoke,
   round: (expr: UnsureExpression, precision: UnsureExpression) => Invoke,
-  floor: UnaryParameterInvoke,
-  sqrt: UnaryParameterInvoke,
-  sine: UnaryParameterInvoke,
-  power: UnaryParameterInvoke,
   nvl: UnaryParameterInvoke,
   stdev: UnaryParameterInvoke,
-  square: UnaryParameterInvoke,
   dateName: UnaryParameterInvoke,
   datePart: UnaryParameterInvoke,
   isNull: (value: UnsureExpression, default_value: UnsureExpression) => Invoke,
@@ -63,7 +58,6 @@ export const FUNCTIONS: {
   lower: UnaryParameterInvoke,
   upper: UnaryParameterInvoke,
   replace: (expression_to_be_searched: UnsureExpression, search_expression: UnsureExpression, replacement_expression: UnsureExpression) => Invoke,
-  rand: NoneParameterInvoke,
   abs: UnaryParameterInvoke,
   acos: UnaryParameterInvoke,
   asin: UnaryParameterInvoke,
@@ -94,13 +88,8 @@ export const max: UnaryParameterInvoke
 export const min: UnaryParameterInvoke
 export const exp: UnaryParameterInvoke
 export const round: (expr: UnsureExpression, precision: UnsureExpression) => Invoke
-export const floor: UnaryParameterInvoke
-export const sqrt: UnaryParameterInvoke
-export const sine: UnaryParameterInvoke
-export const power: UnaryParameterInvoke
 export const nvl: UnaryParameterInvoke
 export const stdev: UnaryParameterInvoke
-export const square: UnaryParameterInvoke
 export const dateName: UnaryParameterInvoke
 export const datePart: UnaryParameterInvoke
 export const isNull: (value: UnsureExpression, default_value: UnsureExpression) => Invoke
@@ -134,7 +123,6 @@ export const quotedName: UnaryParameterInvoke
 export const lower: UnaryParameterInvoke
 export const upper: UnaryParameterInvoke
 export const replace: (expression_to_be_searched: UnsureExpression, search_expression: UnsureExpression, replacement_expression: UnsureExpression) => Invoke
-export const rand: NoneParameterInvoke
 export const abs: UnaryParameterInvoke
 export const acos: UnaryParameterInvoke
 export const asin: UnaryParameterInvoke
