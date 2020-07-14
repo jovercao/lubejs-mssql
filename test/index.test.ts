@@ -7,7 +7,7 @@ import { count, getDate } from '..'
 import {
   connect, table, select, insert, update, SQL, any, execute,
   variant, fn, sp, exists, SORT_DIRECTION, input, output, ProxiedIdentifier, Identifier, Expression, UnsureExpression
-} from '../../lubejs';
+} from 'lubejs';
 
 // argv.option('-h, --host <host>', 'server name')
 //   .option('-u, --user <user>', 'server user')
