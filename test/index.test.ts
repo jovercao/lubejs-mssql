@@ -1,23 +1,48 @@
 import * as assert from 'assert';
 import * as mock from 'mockjs';
 import * as _ from 'lodash';
-import * as program from 'commander'
+// import * as program from 'commander'
 
 import { count, getDate } from '..'
 import {
   connect, table, select, insert, update, SQL, any, execute,
-  variant, fn, sp, exists, SORT_DIRECTION, input, output
-} from 'lubejs';
+  variant, fn, sp, exists, SORT_DIRECTION, input, output, ProxiedIdentifier, Identifier, Expression, UnsureExpression
+} from '../../lubejs';
 
-program.option('-h, --host <host>', 'server name')
-  .option('-u, --user <user>', 'server user')
-  .option('-p, --password <password>', 'server pasword')
-  .option('-P, --port <port>', 'server port')
-  .option('-d, --database <database>', 'database name')
-  .option('-r, --require <module>', 'load modules')
-  .option('-r, --extensions <list>', 'load files')
+// argv.option('-h, --host <host>', 'server name')
+//   .option('-u, --user <user>', 'server user')
+//   .option('-p, --password <password>', 'server pasword')
+//   .option('-P, --port <port>', 'server port')
+//   .option('-d, --database <database>', 'database name')
 
-program.parse(process.argv, { from: 'user' })
+
+const argv: any = {}
+let index = 0
+while (index < process.argv.length) {
+  const arg = process.argv[index]
+  switch (arg) {
+    case '-u':
+    case '---user':
+      argv.user = process.argv[++index]
+      break
+    case '-h':
+    case '--host':
+      argv.host = process.argv[++index]
+      break
+    case '-p':
+    case '--password':
+      argv.password = process.argv[++index]
+      break
+    case '-P':
+    case '--port':
+      argv.port = parseInt(process.argv[++index])
+      break
+    case '-d':
+    case '--database':
+      argv.database = process.argv[++index]
+  }
+  index++
+}
 
 describe('MSSQL TESTS', function () {
   this.timeout(0);
@@ -25,13 +50,13 @@ describe('MSSQL TESTS', function () {
   const driver = require('..')
   const dbConfig = {
     driver,
-    user: program.user || 'sa',
-    password: program.password,
-    host: program.host || 'localhost',
+    user: argv.user || 'sa',
+    password: argv.password,
+    host: argv.host || 'localhost',
     // instance: 'MSSQLSERVER',
-    database: program.database || 'TEST',
-    trustedConnection: program.user ? false : true,
-    port: program.port && parseInt(program.port) || 1433,
+    database: argv.database || 'TEST',
+    trustedConnection: argv.user ? false : true,
+    port: argv.port && parseInt(argv.port) || 1433,
     // 最小值
     poolMin: 0,
     // 最大值
@@ -229,6 +254,12 @@ describe('MSSQL TESTS', function () {
   it('db.query(sql: Select) -> GroupBy', async function () {
     const a = table('Items').as('a');
     const b = table('Items').as('b');
+
+    let x: ProxiedIdentifier
+    let y: Identifier = x
+    let z: Expression = x
+    let n: UnsureExpression = x
+
 
     const sql = select(
       SQL.case(a.fsex).when(true, '男').else('女').as('性别'),

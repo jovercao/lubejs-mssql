@@ -1,6 +1,6 @@
 {
   "name": "lubejs-mssql",
-  "version": "1.0.0-beta04",
+  "version": "1.0.0-beta07",
   "description": "The lubejs driver for mssql.",
   "main": "lib/index.js",
   "directories": {
@@ -27,7 +27,7 @@
     "@types/lodash": "^4.14.157",
     "@types/mocha": "^7.0.2",
     "commander": "^5.1.0",
-    "lubejs": "^1.0.0-beta04",
+    "lubejs": "^1.0.0-beta07",
     "mocha": "^8.0.1",
     "mockjs": "^1.1.0",
     "ts-node": "^8.10.2"
