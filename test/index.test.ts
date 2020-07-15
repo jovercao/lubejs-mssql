@@ -3,10 +3,10 @@ import * as mock from 'mockjs';
 import * as _ from 'lodash';
 // import * as program from 'commander'
 
-import { count, getDate } from '..'
+import { count, getDate, VARIANTS } from '..'
 import {
-  connect, table, select, insert, update, SQL, any, execute,
-  variant, fn, sp, exists, SORT_DIRECTION, input, output, ProxiedIdentifier, Identifier, Expression, UnsureExpression
+  connect, table, select, insert, update, SQL, any, execute, field,
+  variant, fn, sp, exists, SORT_DIRECTION, input, output, ProxiedIdentifier, Identifier, Expression, UnsureExpression, Lube
 } from 'lubejs';
 
 // argv.option('-h, --host <host>', 'server name')
@@ -46,7 +46,7 @@ while (index < process.argv.length) {
 
 describe('MSSQL TESTS', function () {
   this.timeout(0);
-  let db;
+  let db: Lube;
   const driver = require('..')
   const dbConfig = {
     driver,
@@ -86,15 +86,15 @@ describe('MSSQL TESTS', function () {
     //   await db.query('drop PROC doProc');
     // } finally {
     // }
-    await db.query(`CREATE FUNCTION dosomething(
+    await db.query`CREATE FUNCTION dosomething(
         @x int
     )
     RETURNS INT
     BEGIN
         return @x
-    END`);
+    END`;
 
-    await db.query(`CREATE PROC doProc(
+    await db.query`CREATE PROC doProc(
       @i int,
       @o nvarchar(20) OUTPUT
     )
@@ -102,9 +102,9 @@ describe('MSSQL TESTS', function () {
     BEGIN
       set @o = 'hello world'
       return @i
-    END`);
+    END`;
 
-    const createTable = `create table Items (
+    await db.query`create table Items (
       FId INT IDENTITY(1,1) PRIMARY KEY,
       FName NVARCHAR(120),
       FAge INT,
@@ -112,13 +112,12 @@ describe('MSSQL TESTS', function () {
       FCreateDate DATETIME,
       Flag TIMESTAMP NOT NULL
     )`;
-    await db.query(createTable);
   });
 
   after(async function () {
-    await db.query('drop table Items');
-    await db.query('drop function dosomething');
-    await db.query('drop PROC doProc');
+    await db.query`drop table Items`;
+    await db.query`drop function dosomething`;
+    await db.query`drop PROC doProc`;
     db.close();
   });
 
@@ -139,7 +138,7 @@ describe('MSSQL TESTS', function () {
   it('db.insert(table, rows: object[])', async function () {
     const { rows } = mock.mock({
       // 属性 的值是一个数组，其中含有 1 到 10 个元素
-      'rows|100': [{
+      'rows|3001': [{
         // 属性 id 是一个自增数，起始值为 1，每次增 1
         // 'FID|+1': 1,
         'FAge|18-60': 1,
@@ -153,24 +152,7 @@ describe('MSSQL TESTS', function () {
     assert(lines === rows.length);
   });
 
-  it('db.insert(table, rows: object[])', async function () {
-    const { rows } = mock.mock({
-      // 属性 的值是一个数组，其中含有 1 到 10 个元素
-      'rows|100': [{
-        // 属性 id 是一个自增数，起始值为 1，每次增 1
-        // 'FID|+1': 1,
-        'FAge|18-60': 1,
-        'FSex|0-1': false,
-        FName: '@name',
-        FCreateDate: new Date()
-      }]
-    });
-
-    const lines = await db.insert('Items', rows);
-    assert(lines === rows.length);
-  });
-
-  it('insert statement', async function () {
+  it('db.query(sql: Insert) => @@IDENTITY', async function () {
     const row = mock.mock({
       // 属性 id 是一个自增数，起始值为 1，每次增 1
       // 'FID|+1': 10000,
@@ -183,12 +165,12 @@ describe('MSSQL TESTS', function () {
     const { rowsAffected } = await db.query(sql);
     assert(rowsAffected === 1);
 
-    const sql2 = select(variant('@IDENTITY').as('id'));
+    const sql2 = select(any()).from('Items').where(field('fid').eq(VARIANTS.IDENTITY));
     const res2 = await db.query(sql2);
-    assert(res2.rows[0].id > 0);
+    assert(res2.rows.length > 0);
   });
 
-  it('find', async function () {
+  it('db.find(condition: WhereObject)', async function () {
     const item = await db.find('Items', {
       FID: 1
     });
@@ -327,7 +309,7 @@ describe('MSSQL TESTS', function () {
           FAGE: 70,
           FSEX: false
         };
-        lines = await executor.insert('Items', row);
+        lines = await executor.insert('Items', [row]);
         assert(lines > 0);
 
         const t = table('Items');
@@ -346,12 +328,12 @@ describe('MSSQL TESTS', function () {
   it('db.trans -> commit', async () => {
     await db.trans(async (executor) => {
       await executor.query('SET identity_insert [Items] ON');
-      const lines = await executor.insert('Items', {
+      const lines = await executor.insert('Items', [{
         // FId: 10000,
         FName: '添加测试',
         FSex: false,
         FAge: 18
-      });
+      }]);
       assert(lines > 0);
       await executor.query('SET identity_insert [Items] OFF');
     });
