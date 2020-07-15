@@ -21,7 +21,7 @@
   "author": "jover",
   "license": "MIT",
   "dependencies": {
-    "lubejs": "^1.0.0-beta08",
+    "lubejs": "^1.0.0-beta12",
     "mssql": "^6.2.0"
   },
   "devDependencies": {

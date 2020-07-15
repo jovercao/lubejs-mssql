@@ -7,7 +7,7 @@ import { count, getDate, VARIANTS } from '..'
 import {
   connect, table, select, insert, update, SQL, any, execute, field,
   variant, fn, sp, exists, SORT_DIRECTION, input, output, ProxiedIdentifier, Identifier, Expression, UnsureExpression, Lube
-} from 'lubejs';
+} from '../../lubejs';
 
 // argv.option('-h, --host <host>', 'server name')
 //   .option('-u, --user <user>', 'server user')
@@ -161,7 +161,8 @@ describe('MSSQL TESTS', function () {
       FName: '@name',
       FCreateDate: new Date()
     });
-    const sql = insert('Items').values(row);
+    const t = table('Items').as('t')
+    const sql = insert(t).values(row);
     const { rowsAffected } = await db.query(sql);
     assert(rowsAffected === 1);
 
