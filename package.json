@@ -1,6 +1,6 @@
 {
   "name": "lubejs-mssql",
-  "version": "1.0.0-beta07",
+  "version": "1.0.0-beta14",
   "description": "The lubejs driver for mssql.",
   "main": "lib/index.js",
   "directories": {
@@ -21,12 +21,13 @@
   "author": "jover",
   "license": "MIT",
   "dependencies": {
-    "lubejs": "^1.0.0-beta12",
+    "lubejs": "^1.0.0-beta14",
     "mssql": "^6.2.0"
   },
   "devDependencies": {
     "@types/lodash": "^4.14.157",
     "@types/mocha": "^7.0.2",
+    "@types/mockjs": "^1.0.2",
     "commander": "^5.1.0",
     "mocha": "^8.0.1",
     "mockjs": "^1.1.0",

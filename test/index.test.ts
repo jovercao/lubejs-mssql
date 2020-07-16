@@ -1,13 +1,13 @@
-import * as assert from 'assert';
-import * as mock from 'mockjs';
-import * as _ from 'lodash';
+import assert = require('assert');
+import mock = require('mockjs');
+import _ = require('lodash');
 // import * as program from 'commander'
 
 import { count, getDate, VARIANTS } from '..'
 import {
   connect, table, select, insert, update, SQL, any, execute, field,
   variant, fn, sp, exists, SORT_DIRECTION, input, output, ProxiedIdentifier, Identifier, Expression, UnsureExpression, Lube
-} from '../../lubejs';
+} from 'lubejs';
 
 // argv.option('-h, --host <host>', 'server name')
 //   .option('-u, --user <user>', 'server user')
@@ -109,8 +109,8 @@ describe('MSSQL TESTS', function () {
       FName NVARCHAR(120),
       FAge INT,
       FSex BIT,
-      FCreateDate DATETIME,
-      Flag TIMESTAMP NOT NULL
+      FCreateDate DATETIME DEFAULT (GETDATE())
+      --, Flag TIMESTAMP NOT NULL
     )`;
   });
 
@@ -135,7 +135,7 @@ describe('MSSQL TESTS', function () {
     assert(rs2.rows[0].Name === name);
   })
 
-  it('db.insert(table, rows: object[])', async function () {
+  it('db.insert(table, fields: string[], rows: ValueObject[])', async function () {
     const { rows } = mock.mock({
       // 属性 的值是一个数组，其中含有 1 到 10 个元素
       'rows|3001': [{
@@ -150,6 +150,48 @@ describe('MSSQL TESTS', function () {
 
     const lines = await db.insert('Items', rows);
     assert(lines === rows.length);
+  });
+
+  it('db.insert(table, rows: ValueObject)', async function () {
+    const row = mock.mock({
+      // 属性 id 是一个自增数，起始值为 1，每次增 1
+      // 'FID|+1': 1,
+      'FAge|18-60': 1,
+      'FSex|0-1': false,
+      FName: '@name',
+      FCreateDate: new Date()
+    });
+
+    const lines = await db.insert('Items', row);
+    assert(lines === 1);
+  });
+
+  it('db.insert(table, fields, rows: Expression[])', async function () {
+    const lines = await db.insert('Items', ['fage', 'fsex', 'fname'], [18, false, '李莉']);
+    assert(lines === 1);
+  });
+
+  it('db.insert(table, fields, rows: Expression[][])', async function () {
+    const lines = await db.insert('Items', ['fage', 'fsex', 'fname'], [
+      [18, false, '李莉'],
+      [18, false, '王丽萍'],
+      [18, true, '隔壁老王']
+    ]);
+    assert(lines === 3);
+  });
+
+  it('db.insert(table, rows: Expression[])', async function () {
+    const lines = await db.insert('Items', ['李莉', 18, false, new Date()]);
+    assert(lines === 1);
+  });
+
+  it('db.insert(table, rows: Expression[][])', async function () {
+    const lines = await db.insert('Items', [
+      ['李莉', 18, false, new Date()],
+      ['王丽萍', 18, false, new Date()],
+      ['隔壁老王', 18, true, new Date()]
+    ]);
+    assert(lines === 3);
   });
 
   it('db.query(sql: Insert) => @@IDENTITY', async function () {
