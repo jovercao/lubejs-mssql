@@ -5,7 +5,7 @@ import * as program from 'commander'
 import { count, IDENTITY, getDate } from '..'
 import {
   Lube, connect, table, field, select, insert, update, SQL, any, execute,
-  variant, fn, sp, exists, SORT_DIRECTION, input, output
+  variant, fn, sp, exists, SORT_DIRECTION, input, output, SortObject
 } from 'lubejs';
 
 interface IItem {
@@ -224,7 +224,7 @@ describe('MSSQL TESTS', function () {
 
   it('db.find(condition: WhereObject)', async function () {
     const item = await db.find('Items', {
-      FID: 1
+      FId: 1
     });
     assert(item);
   });
@@ -270,12 +270,18 @@ describe('MSSQL TESTS', function () {
   });
 
   it('select', async function () {
-    const rows = await db.select('Items', {
+    const x: SortObject<IItem> = {
+      FId: SORT_DIRECTION.ASC,
+      FAge: SORT_DIRECTION.DESC
+    }
+
+    const rows = await db.select<IItem>('Items', {
       where: {
-        fid: [1, 10, 11, 12, 13, 14]
+        FId: [1, 10, 11, 12, 13, 14]
       },
       sorts: {
-        fid: SORT_DIRECTION.ASC
+        FId: SORT_DIRECTION.ASC,
+        FAge: SORT_DIRECTION.DESC
       },
       offset: 0,
       limit: 1
