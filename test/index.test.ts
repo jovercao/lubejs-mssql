@@ -2,12 +2,20 @@ import * as assert from 'assert';
 import * as mock from 'mockjs';
 import * as _ from 'lodash';
 import * as program from 'commander'
-
 import { count, getDate } from '..'
 import {
   connect, table, select, insert, update, SQL, any, execute,
   variant, fn, sp, exists, SORT_DIRECTION, input, output
-} from 'lubejs';
+} from '../../lubejs';
+
+interface IItem {
+  FId: number
+  FName: string
+  FAge: number
+  FSex: boolean
+  FCreateDate: Date
+  Flag: Buffer
+}
 
 program.option('-h, --host <host>', 'server name')
   .option('-u, --user <user>', 'server user')
@@ -47,6 +55,7 @@ describe('MSSQL TESTS', function () {
   const sqlLogs = true;
 
   before(async function () {
+    // db = await connect('mssql://sa:!crgd-2019@jover.wicp.net:2443/TEST?poolMin=0&poolMax=5&idelTimeout=30000&connectTimeout=15000&requestTimeout=15000');
     db = await connect(dbConfig);
     if (sqlLogs) {
       db.on('command', (cmd) => {
