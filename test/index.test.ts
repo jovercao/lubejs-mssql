@@ -5,9 +5,8 @@ import * as program from 'commander'
 import { count, IDENTITY, getDate } from '..'
 import {
   Lube, connect, table, field, select, insert, update, SQL, any, execute,
-  variant, fn, sp, exists, SORT_DIRECTION, input, output,
-  ProxiedIdentifier, Identifier, Expression, UnsureExpression
-} from '../../lubejs';
+  variant, fn, sp, exists, SORT_DIRECTION, input, output
+} from 'lubejs';
 
 interface IItem {
   FId: number
@@ -255,7 +254,7 @@ describe('MSSQL TESTS', function () {
   });
 
   it('update statement -> join update', async function () {
-    const a = table('items').as<IItem>('a');
+    const a = table<IItem>('items').as('a');
     const b = table('items').as<IItem>('b');
     const sql = update(a)
       .set({
