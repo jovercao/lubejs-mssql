@@ -22,7 +22,7 @@
   "license": "MIT",
   "dependencies": {
     "lodash.merge": "^4.6.2",
-    "lubejs": "^1.0.0-beta16",
+    "lubejs": "^1.0.0-beta17",
     "mssql": "^6.2.0"
   },
   "devDependencies": {

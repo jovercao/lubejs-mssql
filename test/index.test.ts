@@ -230,7 +230,7 @@ describe('MSSQL TESTS', function () {
   });
 
   it('update', async function () {
-    const lines = await db.update('Items', {
+    const lines = await db.update<any>('Items', {
       FNAME: '冷蒙',
       FAGE: 21,
       FSEX: false
