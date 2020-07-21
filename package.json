@@ -1,6 +1,6 @@
 {
   "name": "lubejs-mssql",
-  "version": "1.0.0-beta16",
+  "version": "1.0.0-beta18",
   "description": "The lubejs driver for mssql.",
   "main": "lib/index.js",
   "directories": {
@@ -21,6 +21,7 @@
   "author": "jover",
   "license": "MIT",
   "dependencies": {
+    "lodash.merge": "^4.6.2",
     "lubejs": "^1.0.0-beta16",
     "mssql": "^6.2.0"
   },
