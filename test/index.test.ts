@@ -6,7 +6,7 @@ import { count, IDENTITY, getDate } from '..'
 import {
   Lube, connect, table, field, select, insert, update, SQL, any, execute,
   variant, fn, sp, exists, SORT_DIRECTION, input, output, SortObject
-} from 'lubejs';
+} from '../../lubejs';
 
 interface IItem {
   FId: number
@@ -248,7 +248,7 @@ describe('MSSQL TESTS', function () {
         fage: 100,
         fsex: true
       })
-      .where(a.fid.eq(2));
+      .where(a.FId.eq(2));
     const { rowsAffected } = await db.query(sql);
     assert(rowsAffected === 1);
   });
@@ -263,8 +263,8 @@ describe('MSSQL TESTS', function () {
         fsex: true
       })
       .from(a)
-      .join(b, b.fid.eq(a.fid))
-      .where(a.fid.eq(2));
+      .join(b, b.FId.eq(a.FId))
+      .where(a.FId.eq(2));
     const { rowsAffected } = await db.query(sql);
     assert(rowsAffected === 1);
   });
@@ -297,7 +297,7 @@ describe('MSSQL TESTS', function () {
 
 
     const sql = select(
-      SQL.case(a.fsex).when(true, '男').else('女').as('性别'),
+      SQL.case(a.FSex).when(true, '男').else('女').as('性别'),
       getDate().as('Now'),
       fn('dbo', 'dosomething')(100),
       // 子查询
@@ -306,7 +306,7 @@ describe('MSSQL TESTS', function () {
       b.FId.as('bid')
     )
       .from(a)
-      .join(b, a.FId.eq(b.fid))
+      .join(b, a.FId.eq(b.FId))
       .where(exists(select(1)))
       .groupBy(a.FId, b.FId, a.FSex)
       .having(count(a.FId).gte(1))
@@ -320,7 +320,7 @@ describe('MSSQL TESTS', function () {
     assert(['男', '女'].includes(rows[0]['性别']), '性别不正确');
     assert(rows.length === 10, '查询到的数据不正确');
 
-    const sql2 = select(a.fid, a.fsex).from(a).distinct();
+    const sql2 = select(a.FId, a.FSex).from(a).distinct();
     await db.query(sql2);
 
     const sql3 = select(count(any()).as('count')).from(a);
