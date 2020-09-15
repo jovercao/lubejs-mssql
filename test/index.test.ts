@@ -366,7 +366,7 @@ describe('MSSQL TESTS', function () {
         assert(lines > 0);
 
         const t = table<IItem>('Items');
-        const item = (await executor.query(select(t.any()).from(t).where(t.FId.eq(variant('@identity'))))).rows[0];
+        const item = (await executor.query<any>(select(t.any()).from(t).where(t.FId.eq(variant('@identity'))))).rows[0];
         assert.strictEqual(item.FName, row.FNAME);
         throw new Error('事务错误回滚测试');
       });
