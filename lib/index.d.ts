@@ -1,4 +1,4 @@
-import { Raw, ConnectOptions, IDbProvider, Expressions, Invoke, Variant, JsConstant, Expression } from '../../lubejs/lib/lube';
+import { Identifier, ConnectOptions, IDbProvider, Expressions, Invoke, Variant, JsConstant, Expression } from '../../lubejs/lib/lube';
 
 /**
  * 连接数据库并返回含数据库连接池的Provider
@@ -8,7 +8,7 @@ export function connect(config: ConnectOptions): Promise<IDbProvider>;
 
 export default connect;
 
-type DatePart = Raw<any>;
+type DatePart = Identifier<any>;
 
 type InvokeHandler0<TResult extends JsConstant> = () => Expression<TResult>;
 type InvokeHandler1<TResult extends JsConstant, TArg1 extends JsConstant> = (expr: Expressions<TArg1>) => Expression<TResult>;
