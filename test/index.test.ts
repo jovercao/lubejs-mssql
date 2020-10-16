@@ -212,7 +212,7 @@ describe('MSSQL TESTS', function () {
       FName: '@name',
       FCreateDate: new Date()
     });
-    const t = table('Items').as<IItem>('t')
+    const t = table<IItem>('Items').as('t')
     const sql = insert(t).values(row);
     const { rowsAffected } = await db.query(sql);
     assert(rowsAffected === 1);
@@ -255,7 +255,7 @@ describe('MSSQL TESTS', function () {
 
   it('update statement -> join update', async function () {
     const a = table<IItem>('items').as('a');
-    const b = table('items').as<IItem>('b');
+    const b = table<IItem>('items').as('b');
     const sql = update(a)
       .set({
         fname: '哈罗',
@@ -292,14 +292,14 @@ describe('MSSQL TESTS', function () {
   });
 
   it('db.query(sql: Select) -> GroupBy', async function () {
-    const a = table('Items').as<IItem>('a');
-    const b = table('Items').as<IItem>('b');
+    const a = table<IItem>('Items').as('a');
+    const b = table<IItem>('Items').as('b');
 
 
     const sql = select(
-      SQL.case(a.FSex).when(true, '男').else('女').as('性别'),
-      getDate().as('Now'),
-      fn('dbo', 'dosomething')(100),
+      SQL.case(a.FSex).when(true, '男').else('女').asColumn('性别'),
+      getDate().asColumn('Now'),
+      fn('dbo', 'dosomething').invoke(100),
       // 子查询
       select(1).as('field'),
       a.FId.as('aid'),
