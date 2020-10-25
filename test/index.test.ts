@@ -22,7 +22,7 @@ import {
   SORT_DIRECTION,
   input,
   output,
-  SortObject, Star
+  SortObject, Star, and
 } from "../../lubejs";
 
 interface IItem {
@@ -347,7 +347,10 @@ describe("MSSQL TESTS", function () {
       .from(a)
       .join(b, a.FId.eq(b.FId))
       .join(x, a.FId.eq(x.FId))
-      .where(exists(select(1)))
+      .where(and(
+        exists(select(1)),
+        x.FId.in(select(b.FId).from(b).asValue())
+      ))
       .groupBy(a.FId, b.FId, a.FSex)
       .having(count(a.FId).gte(1))
       .offset(50)
