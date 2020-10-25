@@ -23,7 +23,7 @@ import {
   input,
   output,
   SortObject, Star
-} from "../../lubejs";
+} from "lubejs";
 
 interface IItem {
   FId: number;
