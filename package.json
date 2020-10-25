@@ -24,7 +24,6 @@
   "license": "MIT",
   "dependencies": {
     "lodash.merge": "^4.6.2",
-    "moment": "^2.27.0",
     "mssql": "^6.2.0"
   },
   "devDependencies": {

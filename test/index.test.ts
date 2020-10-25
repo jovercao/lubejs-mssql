@@ -23,7 +23,7 @@ import {
   input,
   output,
   SortObject, Star
-} from "lubejs";
+} from "../../lubejs";
 
 interface IItem {
   FId: number;
@@ -329,6 +329,12 @@ describe("MSSQL TESTS", function () {
     const a = table<IItem>("Items").as("a");
     const b = table<IItem>("Items").as("b");
 
+    const x = select({
+      FId: b.FId
+    })
+    .from(b)
+    .as('x')
+
     const sql = select(
       SQL.case(a.FSex).when(true, "男").else("女").as("性别"),
       getDate().as("Now"),
@@ -340,6 +346,7 @@ describe("MSSQL TESTS", function () {
     )
       .from(a)
       .join(b, a.FId.eq(b.FId))
+      .join(x, a.FId.eq(x.FId))
       .where(exists(select(1)))
       .groupBy(a.FId, b.FId, a.FSex)
       .having(count(a.FId).gte(1))
@@ -360,6 +367,16 @@ describe("MSSQL TESTS", function () {
     rows = (await db.query(sql3)).rows;
     assert(rows[0].count > 0);
   });
+
+  it("db.queryScalar(sql: Select)", async function () {
+    const t = table<IItem>('Items').as('t')
+    const sql = select({
+      records: count(any)
+    }).from(t)
+
+    const records = await db.queryScalar(sql)
+    assert(records > 0)
+  })
 
   it("db.query(sql: Select)", async function () {
     const o = table("sysobjects").as("o");
