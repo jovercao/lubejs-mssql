@@ -33,7 +33,7 @@
     "@types/mockjs": "^1.0.2",
     "@typescript-eslint/parser": "^4.4.1",
     "commander": "^5.1.0",
-    "lubejs": "^1.0.0-beta21",
+    "lubejs": "^2.0.0-beta",
     "mocha": "^8.0.1",
     "mockjs": "^1.1.0",
     "ts-node": "^8.10.2",
@@ -41,8 +41,5 @@
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org/"
-  },
-  "files": [
-    "lib"
-  ]
+  }
 }

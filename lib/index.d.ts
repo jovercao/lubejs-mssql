@@ -1,4 +1,4 @@
-import { Identifier, ConnectOptions, IDbProvider, Expressions, Variant, JsConstant, Expression } from '../../lubejs/lib/lube';
+import { Identifier, ConnectOptions, IDbProvider, Expressions, Variant, JsConstant, Expression } from 'lubejs/lib/lube';
 
 /**
  * 连接数据库并返回含数据库连接池的Provider
