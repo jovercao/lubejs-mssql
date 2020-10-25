@@ -1,4 +1,4 @@
-import { Identifier, ConnectOptions, IDbProvider, Expressions, Invoke, Variant, JsConstant, Expression } from '../../lubejs/lib/lube';
+import { Identifier, ConnectOptions, IDbProvider, Expressions, Variant, JsConstant, Expression } from '../../lubejs/lib/lube';
 
 /**
  * 连接数据库并返回含数据库连接池的Provider
@@ -53,8 +53,8 @@ export const FUNCTIONS: {
   sysDateTime: InvokeHandler0<Date>;
   sysUtcDateTime: InvokeHandler0<Date>;
   charIndex: (pattern: Expressions<string>, str: Expressions<string>, startIndex?: Expressions<number>) => Expression<number>;
-  left: (str: Expressions<string>, length: Expressions<number>) => Invoke<number>;
-  right: (str: Expressions<string>, length: Expressions<number>) => Invoke<number>;
+  left: (str: Expressions<string>, length: Expressions<number>) => Expression<number>;
+  right: (str: Expressions<string>, length: Expressions<number>) => Expression<number>;
   str: InvokeHandler0<string, JsConstant>;
   substring: (expr: Expressions<string>, start: Expressions<number>, length: Expressions<number>) => Expression<string>;
   ascii: InvokeHandler1<number, string>;
@@ -66,11 +66,11 @@ export const FUNCTIONS: {
   rtrim: InvokeHandler1<string, string>;
   space: InvokeHandler1<string, number>;
   reverse: InvokeHandler1<string, string>;
-  stuff: (expression_to_be_searched: Expressions<string>, starting_position: Expressions<number>, number_of_chars: Expressions<number>, replacement_expression: Expressions<string>) => Invoke;
+  stuff: (expression_to_be_searched: Expressions<string>, starting_position: Expressions<number>, number_of_chars: Expressions<number>, replacement_expression: Expressions<string>) => Expression<string>;
   quotedName: InvokeHandler1<string, string>;
   lower: InvokeHandler1<string, string>;
   upper: InvokeHandler1<string, string>;
-  replace: (expression_to_be_searched: Expressions<string>, search_expression: Expressions<string>, replacement_expression: Expressions<string>) => Invoke;
+  replace: (expression_to_be_searched: Expressions<string>, search_expression: Expressions<string>, replacement_expression: Expressions<string>) => Expression<string>;
   abs: InvokeHandler1<number, number>;
   acos: InvokeHandler1<number, number>;
   asin: InvokeHandler1<number, number>;
@@ -118,8 +118,8 @@ export const dateDiff: (part: DatePart, startDate: Expressions<Date>, endDate: E
 export const sysDateTime: InvokeHandler0<Date>;
 export const sysUtcDateTime: InvokeHandler0<Date>;
 export const charIndex: (pattern: Expressions<string>, str: Expressions<string>, startIndex?: Expressions<number>) => Expression<number>;
-export const left: (str: Expressions<string>, length: Expressions<number>) => Invoke<number>;
-export const right: (str: Expressions<string>, length: Expressions<number>) => Invoke<number>;
+export const left: (str: Expressions<string>, length: Expressions<number>) => Expression<number>;
+export const right: (str: Expressions<string>, length: Expressions<number>) => Expression<number>;
 export const str: InvokeHandler0<string, JsConstant>;
 export const substring: (expr: Expressions<string>, start: Expressions<number>, length: Expressions<number>) => Expression<string>;
 export const ascii: InvokeHandler1<number, string>;
@@ -131,11 +131,11 @@ export const ltrim: InvokeHandler1<string, string>;
 export const rtrim: InvokeHandler1<string, string>;
 export const space: InvokeHandler1<string, number>;
 export const reverse: InvokeHandler1<string, string>;
-export const stuff: (expression_to_be_searched: Expressions<string>, starting_position: Expressions<number>, number_of_chars: Expressions<number>, replacement_expression: Expressions<string>) => Invoke;
+export const stuff: (expression_to_be_searched: Expressions<string>, starting_position: Expressions<number>, number_of_chars: Expressions<number>, replacement_expression: Expressions<string>) => Expression<string>;
 export const quotedName: InvokeHandler1<string, string>;
 export const lower: InvokeHandler1<string, string>;
 export const upper: InvokeHandler1<string, string>;
-export const replace: (expression_to_be_searched: Expressions<string>, search_expression: Expressions<string>, replacement_expression: Expressions<string>) => Invoke;
+export const replace: (expression_to_be_searched: Expressions<string>, search_expression: Expressions<string>, replacement_expression: Expressions<string>) => Expression<string>;
 export const abs: InvokeHandler1<number, number>;
 export const acos: InvokeHandler1<number, number>;
 export const asin: InvokeHandler1<number, number>;

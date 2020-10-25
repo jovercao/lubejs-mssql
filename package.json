@@ -1,14 +1,15 @@
 {
   "name": "lubejs-mssql",
-  "version": "1.1.0-beta02",
+  "version": "2.0.0-beta",
   "description": "The lubejs driver for mssql.",
   "main": "lib/index.js",
   "directories": {
     "lib": "lib"
   },
+  "types": "lib/index.d.ts",
   "scripts": {
-    "test": "mocha --require ts-node/register --extensions ts,tsx 'test/**/*.{ts,tsx}'",
-    "test:ts": "mocha test"
+    "test": "mocha --full-trace --require ts-node/register --extensions ts,tsx 'test/**/*.{ts,tsx}'",
+    "test:ts": "mocha --full-trace test"
   },
   "keywords": [
     "mssql",
@@ -39,5 +40,8 @@
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org/"
-  }
+  },
+  "files": [
+    "lib"
+  ]
 }
