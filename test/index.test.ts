@@ -22,7 +22,10 @@ import {
   SORT_DIRECTION,
   input,
   output,
-  SortObject, Star, and, bracket
+  SortObject,
+  Star,
+  and,
+  bracket
 } from "../../lubejs";
 
 interface IItem {
@@ -31,7 +34,7 @@ interface IItem {
   FAge: number;
   FSex: boolean;
   FCreateDate: Date;
-  Flag: Buffer;
+  Flag: ArrayBuffer;
 }
 
 // argv.option('-h, --host <host>', 'server name')
@@ -134,8 +137,8 @@ describe("MSSQL TESTS", function () {
       FName NVARCHAR(120),
       FAge INT,
       FSex BIT,
-      FCreateDate DATETIME DEFAULT (GETDATE())
-      --, Flag TIMESTAMP NOT NULL
+      FCreateDate DATETIME DEFAULT (GETDATE()),
+      Flag TIMESTAMP NOT NULL
     )`;
   });
 
@@ -216,8 +219,14 @@ describe("MSSQL TESTS", function () {
   });
 
   it("db.insert(table, rows: Expression[])", async function () {
-    const lines = await db.insert("Items", ["李莉", 18, false, new Date()]);
-    assert(lines === 1);
+    let err: Error
+    try {
+      const lines = await db.insert("Items", ["李莉", 18, false, new Date(), Buffer.from('abc')]);
+      assert(lines === 1);
+    } catch(e) {
+      err = e
+    }
+    assert(err && err.message === 'Cannot insert an explicit value into a timestamp column. Use INSERT with a column list to exclude the timestamp column, or insert a DEFAULT into the timestamp column.', '因为Flag字段原因，该语句必须报错，否则是不正常的')
   });
 
   it("db.insert(table, fields, rows: Expression[][])", async function () {
@@ -329,8 +338,13 @@ describe("MSSQL TESTS", function () {
     const a = table<IItem>("Items").as("a");
     const b = table<IItem>("Items").as("b");
 
-    const x = select({
-      FId: b.FId
+    const x = select<IItem>({
+      FId: b.FId,
+      FName: b.FName,
+      FAge: b.FAge,
+      FCreateDate: b.FCreateDate,
+      FSex: b.FSex,
+      Flag: b.Flag
     })
     .from(b)
     .as('x')
@@ -373,9 +387,7 @@ describe("MSSQL TESTS", function () {
 
   it("db.queryScalar(sql: Select)", async function () {
     const t = table<IItem>('Items').as('t')
-    const sql = select({
-      records: count(any)
-    }).from(t)
+    const sql = select(count(any)).from(t)
 
     const records = await db.queryScalar(sql)
     assert(records > 0)
@@ -385,8 +397,8 @@ describe("MSSQL TESTS", function () {
     const o = table("sysobjects").as("o");
     const p = table(["sys", "extended_properties"]).as("p");
     const sql = select(
-      o.id,
-      o.name,
+      o.field('id'),
+      o.field('name'),
       p.value.as("desc"),
       input("inputValue", 1000).as("inputValue")
     )
