@@ -8,7 +8,7 @@
   },
   "types": "lib/index.d.ts",
   "scripts": {
-    "test": "mocha --full-trace --require ts-node/register --extensions ts,tsx 'test/**/*.{ts,tsx}'",
+    "test": "mocha --require ts-node/register --extensions ts,tsx 'test/**/*.{ts,tsx}'",
     "test:ts": "mocha --full-trace test"
   },
   "keywords": [

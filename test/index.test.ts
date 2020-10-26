@@ -22,7 +22,7 @@ import {
   SORT_DIRECTION,
   input,
   output,
-  SortObject, Star, and
+  SortObject, Star, and, bracket
 } from "../../lubejs";
 
 interface IItem {
@@ -340,7 +340,7 @@ describe("MSSQL TESTS", function () {
       getDate().as("Now"),
       scalarFn(["dbo", "dosomething"])(100),
       // 子查询
-      select(1).asValue().as("field"),
+      select(bracket(1)).asValue().as("field"),
       a.FId.as("aid"),
       b.FId.as("bid")
     )
