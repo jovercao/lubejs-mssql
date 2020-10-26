@@ -1,4 +1,4 @@
-import { Identifier, ConnectOptions, IDbProvider, Expressions, Variant, JsConstant, Expression } from '../../lubejs/lib/lube';
+import { Identifier, ConnectOptions, IDbProvider, Expressions, Variant, JsConstant, Expression, BuiltIn } from '../../lubejs/lib/lube';
 
 /**
  * 连接数据库并返回含数据库连接池的Provider
@@ -7,8 +7,6 @@ import { Identifier, ConnectOptions, IDbProvider, Expressions, Variant, JsConsta
 export function connect(config: ConnectOptions): Promise<IDbProvider>;
 
 export default connect;
-
-type DatePart = Identifier<any>;
 
 type InvokeHandler0<TResult extends JsConstant> = () => Expression<TResult>;
 type InvokeHandler1<TResult extends JsConstant, TArg1 extends JsConstant> = (expr: Expressions<TArg1>) => Expression<TResult>;
@@ -38,8 +36,8 @@ export const FUNCTIONS: {
   round: (expr: Expressions<number>, precision: Expressions<number>) => Expression<number>;
   nvl: <T1, T2>(expr: Expressions<T1>, default_value: Expressions<T2>) => Expression<T1 | T2>;
   stdev: InvokeHandler1<number, number>;
-  dateName: InvokeHandler1<string, Date>;
-  datePart: InvokeHandler1<number, Date>;
+  dateName: (part: DatePart, date: Expressions<Date>) => Expression<string>;
+  datePart: (part: DatePart, date: Expressions<Date>) => Expression<number>;
   isNull: <T1, T2>(expr: Expressions<T1>, default_value: Expressions<T2>) => Expression<T1 | T2>;
   len: InvokeHandler1<number, string>;
   getDate: InvokeHandler0<Date>;
@@ -94,7 +92,7 @@ export const FUNCTIONS: {
   tan: InvokeHandler1<number, number>;
 };
 
-export const count: InvokeHandler1<number, any>;
+export const count: (expr: Star | Expressions<JsConstant>) => Expression<number>;
 export const avg: InvokeHandler1<number, number>;
 export const sum: InvokeHandler1<number, number>;
 export const max: <T extends  Exclude<JsConstant, Binary>>(expr: Expression<T>) => Expression<T>;
@@ -103,8 +101,8 @@ export const exp: InvokeHandler1<number, number>;
 export const round: (expr: Expressions<number>, precision: Expressions<number>) => Expression<number>;
 export const nvl: <T1, T2>(expr: Expressions<T1>, default_value: Expressions<T2>) => Expression<T1 | T2>;
 export const stdev: InvokeHandler1<number, number>;
-export const dateName: InvokeHandler1<string, Date>;
-export const datePart: InvokeHandler1<number, Date>;
+export const dateName: (part: DatePart, date: Expressions<Date>) => Expression<string>;
+export const datePart: (part: DatePart, date: Expressions<Date>) => Expression<number>;
 export const isNull: <T1, T2>(expr: Expressions<T1>, default_value: Expressions<T2>) => Expression<T1 | T2>;
 export const len: InvokeHandler1<number, string>;
 export const getDate: InvokeHandler0<Date>;
@@ -158,72 +156,75 @@ export const sqrt: InvokeHandler1<number, number>;
 export const square: InvokeHandler1<number, number>;
 export const tan: InvokeHandler1<number, number>;
 
+
+type DatePart = BuiltIn<keyof typeof DATE_PART>;
+
 /**
  * 日期格式部分
  */
 export const DATE_PART: {
-  YEAR: DatePart;
-  YY: DatePart;
-  YYYY: DatePart;
-  QUARTER: DatePart;
-  QQ: DatePart;
-  Q: DatePart;
-  MONTH: DatePart;
-  MM: DatePart;
-  M: DatePart;
-  DAYOFYEAR: DatePart;
-  DY: DatePart;
-  Y: DatePart;
-  DAY: DatePart;
-  DD: DatePart;
-  D: DatePart;
-  WEEK: DatePart;
-  WK: DatePart;
-  WW: DatePart;
-  WEEKDAY: DatePart;
-  DW: DatePart;
-  HOUR: DatePart;
-  HH: DatePart;
-  MINUTE: DatePart;
-  MI: DatePart;
-  N: DatePart;
-  SECOND: DatePart;
-  SS: DatePart;
-  S: DatePart;
-  MILLISECOND: DatePart;
-  MS: DatePart;
+  YEAR: BuiltIn<'YEAR'>;
+  YY: BuiltIn<'YY'>;
+  YYYY: BuiltIn<'YYYY'>;
+  QUARTER: BuiltIn<'QUARTER'>;
+  QQ: BuiltIn<'QQ'>;
+  Q: BuiltIn<'Q'>;
+  MONTH: BuiltIn<'MONTH'>;
+  MM: BuiltIn<'MM'>;
+  M: BuiltIn<'M'>;
+  DAYOFYEAR: BuiltIn<'DAYOFYEAR'>;
+  DY: BuiltIn<'DY'>;
+  Y: BuiltIn<'Y'>;
+  DAY: BuiltIn<'DAY'>;
+  DD: BuiltIn<'DD'>;
+  D: BuiltIn<'D'>;
+  WEEK: BuiltIn<'WEEK'>;
+  WK: BuiltIn<'WK'>;
+  WW: BuiltIn<'WW'>;
+  WEEKDAY: BuiltIn<'WEEKDAY'>;
+  DW: BuiltIn<'DW'>;
+  HOUR: BuiltIn<'HOUR'>;
+  HH: BuiltIn<'HH'>;
+  MINUTE: BuiltIn<'MINUTE'>;
+  MI: BuiltIn<'MI'>;
+  N: BuiltIn<'N'>;
+  SECOND: BuiltIn<'SECOND'>;
+  SS: BuiltIn<'SS'>;
+  S: BuiltIn<'S'>;
+  MILLISECOND: BuiltIn<'MILLISECOND'>;
+  MS: BuiltIn<'MS'>;
 }
 
-export const YEAR: DatePart;
-export const YY: DatePart;
-export const YYYY: DatePart;
-export const QUARTER: DatePart;
-export const QQ: DatePart;
-export const Q: DatePart;
-export const MONTH: DatePart;
-export const MM: DatePart;
-export const M: DatePart;
-export const DAYOFYEAR: DatePart;
-export const DY: DatePart;
-export const Y: DatePart;
-export const DAY: DatePart;
-export const DD: DatePart;
-export const D: DatePart;
-export const WEEK: DatePart;
-export const WK: DatePart;
-export const WW: DatePart;
-export const WEEKDAY: DatePart;
-export const DW: DatePart;
-export const HOUR: DatePart;
-export const HH: DatePart;
-export const MINUTE: DatePart;
-export const MI: DatePart;
-export const N: DatePart;
-export const SECOND: DatePart;
-export const SS: DatePart;
-export const S: DatePart;
-export const MILLISECOND: DatePart;
-export const MS: DatePart
+export const YEAR: BuiltIn<'YEAR'>;
+export const YY: BuiltIn<'YY'>;
+export const YYYY: BuiltIn<'YYYY'>;
+export const QUARTER: BuiltIn<'QUARTER'>;
+export const QQ: BuiltIn<'QQ'>;
+export const Q: BuiltIn<'Q'>;
+export const MONTH: BuiltIn<'MONTH'>;
+export const MM: BuiltIn<'MM'>;
+export const M: BuiltIn<'M'>;
+export const DAYOFYEAR: BuiltIn<'DAYOFYEAR'>;
+export const DY: BuiltIn<'DY'>;
+export const Y: BuiltIn<'Y'>;
+export const DAY: BuiltIn<'DAY'>;
+export const DD: BuiltIn<'DD'>;
+export const D: BuiltIn<'D'>;
+export const WEEK: BuiltIn<'WEEK'>;
+export const WK: BuiltIn<'WK'>;
+export const WW: BuiltIn<'WW'>;
+export const WEEKDAY: BuiltIn<'WEEKDAY'>;
+export const DW: BuiltIn<'DW'>;
+export const HOUR: BuiltIn<'HOUR'>;
+export const HH: BuiltIn<'HH'>;
+export const MINUTE: BuiltIn<'MINUTE'>;
+export const MI: BuiltIn<'MI'>;
+export const N: BuiltIn<'N'>;
+export const SECOND: BuiltIn<'SECOND'>;
+export const SS: BuiltIn<'SS'>;
+export const S: BuiltIn<'S'>;
+export const MILLISECOND: BuiltIn<'MILLISECOND'>;
+export const MS: BuiltIn<'MS'>
 
 /**
  * 系统变量
@@ -232,162 +233,162 @@ export const VARIANTS: {
   /**
    * 最后一次插入数据的标识列值
    */
-  IDENTITY: Variant<number>;
+  IDENTITY: Variant<number, '@@IDENTITY'>;
   /**
    * 最后一次执行受影响函数
    */
-  ROWCOUNT: Variant<number>;
+  ROWCOUNT: Variant<number, '@@ROWCOUNT'>;
   /**
    * 返回自上次启动 Microsoft SQL Server以来连接或试图连接的次数。
    */
-  CONNECTIONS: Variant<number>;
+  CONNECTIONS: Variant<number, '@@CONNECTIONS'>;
   /**
    * 返回自上次启动 Microsoft SQL Server以来 CPU 的工作时间，单位为毫秒（基于系统计时器的分辨率）。
    */
-  CPU_BUSY: Variant<number>;
+  CPU_BUSY: Variant<number, '@@CPU_BUSY'>;
   /**
    * 返回 SET DATEFIRST 参数的当前值，SET DATEFIRST 参数指明所规定的每周第一天：1 对应星期一，2 对应星期二，依次类推，用 7 对应星期日。
    */
-  DATEFIRST: Variant<number>;
+  DATEFIRST: Variant<number, '@@DATEFIRST'>;
   /**
    * 返回 Microsoft SQL Server自上次启动后用于执行输入和输出操作的时间，单位为毫秒（基于系统计时器的分辨率）。
    */
-  IO_BUSY: Variant<number>;
+  IO_BUSY: Variant<number, '@@IO_BUSY'>;
   /**
    * 返回当前所使用语言的本地语言标识符(ID)。
    */
-  LANGID: Variant<number>;
+  LANGID: Variant<number, '@@LANGID'>;
   /**
    * 返回当前使用的语言名。
    */
-  LANGUAGE: Variant<string>;
+  LANGUAGE: Variant<string, '@@LANGUAGE'>;
   /**
    * 返回 Microsoft SQL Server上允许的同时用户连接的最大数。返回的数不必为当前配置的数值。
    */
-  MAX_CONNECTIONS: Variant<number>;
+  MAX_CONNECTIONS: Variant<number, '@@MAX_CONNECTIONS'>;
   /**
    * 返回 Microsoft SQL Server自上次启动后从网络上读取的输入数据包数目。
    */
-  PACK_RECEIVED: Variant<number>;
+  PACK_RECEIVED: Variant<number, '@@PACK_RECEIVED'>;
   /**
    * 返回 Microsoft SQL Server自上次启动后写到网络上的输出数据包数目。
    */
-  PACK_SENT: Variant<number>;
+  PACK_SENT: Variant<number, '@@PACK_SENT'>;
   /**
    * 返回自 SQL Server 上次启动后，在 Microsoft SQL Server连接上发生的网络数据包错误数。
    */
-  PACKET_ERRORS: Variant<number>;
+  PACKET_ERRORS: Variant<number, '@@PACKET_ERRORS'>;
   /**
    * 返回运行 Microsoft SQL Server的本地服务器名称。
    */
-  SERVERNAME: Variant<string>;
+  SERVERNAME: Variant<string, '@@SERVERNAME'>;
   /**
    * 返回 Microsoft SQL Server正在其下运行的注册表键名。若当前实例为默认实例，则 @@SERVICENAME 返回 MSSQLServer；若当前实例是命名实例，则该函数返回实例名。
    */
-  SERVICENAME: Variant<string>;
+  SERVICENAME: Variant<string, '@@SERVICENAME'>;
   /**
    * 返回当前用户进程的服务器进程标识符 (ID)。
    */
-  SPID: Variant<number>;
+  SPID: Variant<number, '@@SPID'>;
   /**
    * 返回一刻度的微秒数。
    */
-  TIMETICKS: Variant<number>;
+  TIMETICKS: Variant<number, '@@TIMETICKS'>;
   /**
    * 返回 Microsoft SQL Server自上次启动后，所遇到的磁盘读/写错误数。
    */
-  TOTAL_ERRORS: Variant<number>;
+  TOTAL_ERRORS: Variant<number, '@@TOTAL_ERRORS'>;
   /**
    * 返回 Microsoft SQL Server自上次启动后写入磁盘的次数。
    */
-  TOTAL_WRITE: Variant<number>;
+  TOTAL_WRITE: Variant<number, '@@TOTAL_WRITE'>;
   /**
    * 返回 Microsoft SQL Server当前安装的日期、版本和处理器类型。
    */
-  VERSION: Variant<string>;
+  VERSION: Variant<string, '@@VERSION'>;
   /**
    * 返回 Microsoft SQL Server自上次启动后读取磁盘（不是读取高速缓存）的次数。
    */
-  TOTAL_READ: Variant<number>;
+  TOTAL_READ: Variant<number, '@@TOTAL_READ'>;
 }
 
 /**
  * 最后一次插入数据的标识列值
  */
-export const IDENTITY: Variant<number>;
+export const IDENTITY: Variant<number, '@@IDENTITY'>;
 /**
  * 最后一次执行受影响函数
  */
-export const ROWCOUNT: Variant<number>;
+export const ROWCOUNT: Variant<number, '@@ROWCOUNT'>;
 /**
  * 返回自上次启动 Microsoft SQL Server以来连接或试图连接的次数。
  */
-export const CONNECTIONS: Variant<number>;
+export const CONNECTIONS: Variant<number, '@@CONNECTIONS'>;
 /**
  * 返回自上次启动 Microsoft SQL Server以来 CPU 的工作时间，单位为毫秒（基于系统计时器的分辨率）。
  */
-export const CPU_BUSY: Variant<number>;
+export const CPU_BUSY: Variant<number, '@@CPU_BUSY'>;
 /**
  * 返回 SET DATEFIRST 参数的当前值，SET DATEFIRST 参数指明所规定的每周第一天：1 对应星期一，2 对应星期二，依次类推，用 7 对应星期日。
  */
-export const DATEFIRST: Variant<number>;
+export const DATEFIRST: Variant<number, '@@DATEFIRST'>;
 /**
  * 返回 Microsoft SQL Server自上次启动后用于执行输入和输出操作的时间，单位为毫秒（基于系统计时器的分辨率）。
  */
-export const IO_BUSY: Variant<number>;
+export const IO_BUSY: Variant<number, '@@IO_BUSY'>;
 /**
  * 返回当前所使用语言的本地语言标识符(ID)。
  */
-export const LANGID: Variant<number>;
+export const LANGID: Variant<number, '@@LANGID'>;
 /**
  * 返回当前使用的语言名。
  */
-export const LANGUAGE: Variant<string>;
+export const LANGUAGE: Variant<string, '@@LANGUAGE'>;
 /**
  * 返回 Microsoft SQL Server上允许的同时用户连接的最大数。返回的数不必为当前配置的数值。
  */
-export const MAX_CONNECTIONS: Variant<number>;
+export const MAX_CONNECTIONS: Variant<number, '@@MAX_CONNECTIONS'>;
 /**
  * 返回 Microsoft SQL Server自上次启动后从网络上读取的输入数据包数目。
  */
-export const PACK_RECEIVED: Variant<number>;
+export const PACK_RECEIVED: Variant<number, '@@PACK_RECEIVED'>;
 /**
  * 返回 Microsoft SQL Server自上次启动后写到网络上的输出数据包数目。
  */
-export const PACK_SENT: Variant<number>;
+export const PACK_SENT: Variant<number, '@@PACK_SENT'>;
 /**
  * 返回自 SQL Server 上次启动后，在 Microsoft SQL Server连接上发生的网络数据包错误数。
  */
-export const PACKET_ERRORS: Variant<number>;
+export const PACKET_ERRORS: Variant<number, '@@PACKET_ERRORS'>;
 /**
  * 返回运行 Microsoft SQL Server的本地服务器名称。
  */
-export const SERVERNAME: Variant<string>;
+export const SERVERNAME: Variant<string, '@@SERVERNAME'>;
 /**
  * 返回 Microsoft SQL Server正在其下运行的注册表键名。若当前实例为默认实例，则 @@SERVICENAME 返回 MSSQLServer；若当前实例是命名实例，则该函数返回实例名。
  */
-export const SERVICENAME: Variant<string>;
+export const SERVICENAME: Variant<string, '@@SERVICENAME'>;
 /**
  * 返回当前用户进程的服务器进程标识符 (ID)。
  */
-export const SPID: Variant<number>;
+export const SPID: Variant<number, '@@SPID'>;
 /**
  * 返回一刻度的微秒数。
  */
-export const TIMETICKS: Variant<number>;
+export const TIMETICKS: Variant<number, '@@TIMETICKS'>;
 /**
  * 返回 Microsoft SQL Server自上次启动后，所遇到的磁盘读/写错误数。
  */
-export const TOTAL_ERRORS: Variant<number>;
+export const TOTAL_ERRORS: Variant<number, '@@TOTAL_ERRORS'>;
 /**
  * 返回 Microsoft SQL Server自上次启动后写入磁盘的次数。
  */
-export const TOTAL_WRITE: Variant<number>;
+export const TOTAL_WRITE: Variant<number, '@@TOTAL_WRITE'>;
 /**
  * 返回 Microsoft SQL Server当前安装的日期、版本和处理器类型。
  */
-export const VERSION: Variant<string>;
+export const VERSION: Variant<string, '@@VERSION'>;
 /**
  * 返回 Microsoft SQL Server自上次启动后读取磁盘（不是读取高速缓存）的次数。
  */
-export const TOTAL_READ: Variant<number>;
+export const TOTAL_READ: Variant<number, '@@TOTAL_READ'>;
