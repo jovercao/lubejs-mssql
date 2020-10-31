@@ -74,7 +74,8 @@
   },
   "compileOnSave": true,
   "include": [
-    "test"
+    "test",
+    "typings/index.d.ts"
   ],
   "exclude": [
     "./**/*.js"

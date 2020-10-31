@@ -2,7 +2,7 @@ import assert = require("assert");
 import * as mock from "mockjs";
 import * as _ from "lodash";
 import * as program from "commander";
-import { count, IDENTITY, getDate } from "../lib";
+import { count, IDENTITY, getDate, dateAdd, isNull, DATE_PART } from "../lib/index";
 import {
   Lube,
   connect,
@@ -25,8 +25,9 @@ import {
   SortObject,
   Star,
   and,
-  bracket
+  bracket, $case, constant, or, convert, NamedSelect
 } from "../../lubejs";
+import { cloneDeep } from 'lodash';
 
 interface IItem {
   FId: number;
@@ -479,7 +480,7 @@ describe("MSSQL TESTS", function () {
   });
 
   it("db.query(sql: Execute)", async function () {
-    const p2 = output("o", String);
+    const p2 = output("o", "string");
     const sql = execute("doProc", [1, p2]);
     const res = await db.query(sql);
 
@@ -488,9 +489,146 @@ describe("MSSQL TESTS", function () {
   });
 
   it("db.execute(sp, [...args])", async function () {
-    const p2 = output("o", "NVARCHAR(MAX)");
+    const p2 = output("o", 'string');
     const res = await db.execute("doProc", [1, p2]);
     assert(res.returnValue === 1);
     assert(p2.value === "hello world");
   });
+
+  it('convert', async () => {
+    const sql = select(constant('2020-01-01T01:01:01+08:00').to('date'))
+    const s = await db.queryScalar(sql)
+    console.log(s)
+  })
+
+  it.only('AST.clone', async () => {
+    let offset: number = 0, limit: number = 50,
+      providerId: number, producerId: number,
+      productId: number, warehouseId: number,
+      location: string,
+      qualityStatus: number = null,
+      unsalable: boolean,
+      unsalableDay: number = 180,
+      nearExpire: boolean,
+      nearExpireDay: number = 180,
+      keyword: string,
+      sorts: [
+        {
+          "column":"quantity",
+          "direction":"DESC"
+        }
+      ]
+
+    unsalableDay = (unsalableDay || 180);
+    nearExpireDay = (nearExpireDay || 180);
+
+    const unsalableStock = table('stock').as('unsalableStock')
+    const stock = select({
+      id: unsalableStock.id,
+      date: unsalableStock.date,
+      code: unsalableStock.code,
+      productId: unsalableStock.productId,
+      quantity: unsalableStock.quantity,
+      unit: unsalableStock.unit,
+      providerId: unsalableStock.providerId,
+      comefromId: unsalableStock.comefromId,
+      warehouseId: unsalableStock.warehouseId,
+      description: unsalableStock.description,
+      amount: unsalableStock.quantity.mul(isNull(unsalableStock.costPrice, 0)),
+      qualityStatus: unsalableStock.status,
+      location: unsalableStock.location,
+      isNearExpiry: $case().when(dateAdd(DATE_PART.DAY, nearExpireDay, getDate()).gte(unsalableStock.expiryDate), true).else(false),
+      isUnsalable: $case().when(dateAdd(DATE_PART.DAY, unsalableDay, unsalableStock.date).gte(getDate()), true).else(false),
+      belongId: unsalableStock.belongId
+    })
+    .from(unsalableStock)
+    .as('stock')
+
+    const product = table('product').as('product')
+    const provider = table('company').as('provider')
+    const comefrom = table('company').as('comefrom')
+    const producer = table('company').as('producer')
+    const warehouse = table('warehouse').as('warehouse')
+
+
+    const detailSql = select({
+      id: stock.id,
+      date: stock.date,
+      code: stock.code,
+      productId: stock.productId,
+      drugName: product.drugName,
+      goodsName: product.goodsName,
+      specs: product.specs,
+      model: product.model,
+      quantity: stock.quantity,
+      unit: stock.unit,
+      providerId: stock.providerId,
+      providerName: provider.$('name'),
+      providerCode: provider.code,
+      comefromId: stock.comefromId,
+      comefromCode: comefrom.code,
+      comefromName: comefrom.$('name'),
+      producerId: product.producerId,
+      producerCode: producer.code,
+      producerName: producer.$('name'),
+      warehouseId: stock.warehouseId,
+      warehouseCode: warehouse.code,
+      warehouseName: warehouse.$('name'),
+      description: stock.description,
+      location: stock.location,
+      amount: stock.amount,
+      qualityStatus: stock.qualityStatus,
+      isNearExpiry: stock.isNearExpiry,
+      isUnsalable: stock.isUnsalable,
+      belongId: stock.belongId
+    }).from(stock)
+      .join(product, product.id.eq(stock.productId))
+      .leftJoin(producer, producer.id.eq(product.producerId))
+      .leftJoin(provider, provider.id.eq(stock.providerId))
+      .leftJoin(comefrom, comefrom.id.eq(stock.comefromId))
+      .leftJoin(warehouse, warehouse.id.eq(stock.warehouseId))
+      .where(and(
+        stock.quantity.gt(0),
+        or(
+          constant(productId).isNull(),
+          stock.productId.eq(productId)
+        ),
+        or(
+          constant(providerId).isNull(),
+          stock.providerId.eq(providerId)
+        ),
+        or(
+          constant(producerId).isNull(),
+          product.producerId.eq(producerId)
+        ),
+        or(
+          constant(warehouseId).isNull(),
+          stock.warehouseId.eq(warehouseId)
+        ),
+        or(
+          isNull(location, '').eq(''),
+          stock.location.like(location)
+        ),
+        or(
+          constant(qualityStatus).isNull(),
+          stock.qualityStatus.eq(qualityStatus)
+        ),
+        or(
+          constant(unsalable).isNull(),
+          stock.isUnsalable.eq(unsalable)
+        ),
+        or(
+          constant(nearExpire).isNull(),
+          stock.isNearExpiry.eq(nearExpire)
+        )
+      ))
+    const countView = detailSql.as('countView')
+    const countSql = select(count(countView.id)).from(countView)
+    const copiedCountSql = countSql.clone()
+
+    const sql = db.compiler.compile(countSql)
+    const copiedSql = db.compiler.compile(copiedCountSql)
+    console.log((copiedCountSql.$froms[0] as NamedSelect).$select, copiedSql.sql)
+    assert(sql === copiedSql, sql.sql + '\n\n' + copiedSql.sql)
+  })
 });
