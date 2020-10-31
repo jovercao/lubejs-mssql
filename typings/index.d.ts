@@ -1,3 +1,3 @@
-declare module '../../lubejs' {
+declare module 'lubejs' {
 
 }

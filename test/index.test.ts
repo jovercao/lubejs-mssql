@@ -26,7 +26,7 @@ import {
   Star,
   and,
   bracket, $case, constant, or, convert, NamedSelect
-} from "../../lubejs";
+} from "lubejs";
 import { cloneDeep } from 'lodash';
 
 interface IItem {
@@ -380,7 +380,6 @@ describe("MSSQL TESTS", function () {
 
     const sql2 = select(a.FId, a.FSex).from(a).distinct();
     await db.query(sql2);
-
     const sql3 = select(count(star).as("count")).from(a);
     rows = (await db.query(sql3)).rows;
     assert(rows[0].count > 0);
@@ -502,6 +501,11 @@ describe("MSSQL TESTS", function () {
   })
 
   it.only('AST.clone', async () => {
+    const abc = table('abc')
+    const abcCopied = abc.clone()
+
+    assert.deepStrictEqual(abcCopied.abc.$name, ['abc', 'abc'])
+
     let offset: number = 0, limit: number = 50,
       providerId: number, producerId: number,
       productId: number, warehouseId: number,
@@ -626,9 +630,11 @@ describe("MSSQL TESTS", function () {
     const countSql = select(count(countView.id)).from(countView)
     const copiedCountSql = countSql.clone()
 
+    assert(countView !== copiedCountSql.$froms[0])
+    assert.deepStrictEqual((copiedCountSql.$froms[0] as any).abc.$name, ['countView', 'abc'])
+
     const sql = db.compiler.compile(countSql)
     const copiedSql = db.compiler.compile(copiedCountSql)
-    console.log((copiedCountSql.$froms[0] as NamedSelect).$select, copiedSql.sql)
-    assert(sql === copiedSql, sql.sql + '\n\n' + copiedSql.sql)
+    assert(sql.sql === copiedSql.sql, "克隆功能出现问题：" + sql.sql + '\n\n' + copiedSql.sql)
   })
 });
