@@ -1,6 +1,6 @@
 {
   "name": "lubejs-mssql",
-  "version": "2.0.0-beta.10",
+  "version": "2.0.0-beta.11",
   "description": "The lubejs driver for mssql.",
   "main": "lib/index.js",
   "directories": {
