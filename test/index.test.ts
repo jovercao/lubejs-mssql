@@ -2,7 +2,7 @@ import assert = require("assert");
 import * as mock from "mockjs";
 import * as _ from "lodash";
 import * as program from "commander";
-import { count, IDENTITY, getDate, dateAdd, isNull, DATE_PART } from "../lib/index";
+import { count, IDENTITY, getDate, dateAdd, isNull, DATE_PART, min } from "../lib/index";
 import {
   Lube,
   connect,
@@ -25,9 +25,8 @@ import {
   SortObject,
   Star,
   and,
-  bracket, $case, constant, or, convert, NamedSelect
+  bracket, $case, constant, or, convert, NamedSelect, $with
 } from "lubejs";
-import { cloneDeep } from 'lodash';
 
 interface IItem {
   FId: number;
@@ -219,6 +218,16 @@ describe("MSSQL TESTS", function () {
     assert(lines === 3);
   });
 
+  it("db.query($with(...))", async function () {
+    const t = table<IItem>('Items').as('t')
+    const x = select(t._).from(t).as('x')
+    const minId = await db.queryScalar(
+      $with([x])
+      .select(min(x.FId)).from(x)
+    );
+    assert(minId >= 0);
+  });
+
   it("db.insert(table, rows: Expression[])", async function () {
     let err: Error
     try {
@@ -254,7 +263,6 @@ describe("MSSQL TESTS", function () {
     const sql = insert(t).values(row);
     const { rowsAffected } = await db.query(sql);
     assert(rowsAffected === 1);
-
     const sql2 = select<IItem>(any)
       .from("Items")
       .where(field("fid").eq(IDENTITY));
@@ -500,7 +508,7 @@ describe("MSSQL TESTS", function () {
     console.log(s)
   })
 
-  it.only('AST.clone', async () => {
+  it('AST.clone', async () => {
     const abc = table('abc')
     const abcCopied = abc.clone()
 
@@ -637,4 +645,5 @@ describe("MSSQL TESTS", function () {
     const copiedSql = db.compiler.compile(copiedCountSql)
     assert(sql.sql === copiedSql.sql, "克隆功能出现问题：" + sql.sql + '\n\n' + copiedSql.sql)
   })
+
 });
