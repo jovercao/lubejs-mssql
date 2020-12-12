@@ -222,7 +222,7 @@ describe("MSSQL TESTS", function () {
     const t = table<IItem>('Items').as('t')
     const x = select(t._).from(t).as('x')
     const minId = await db.queryScalar(
-      $with([x])
+      $with(x)
       .select(min(x.FId)).from(x)
     );
     assert(minId >= 0);
