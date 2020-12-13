@@ -372,7 +372,7 @@ describe("MSSQL TESTS", function () {
       .join(x, a.FId.eq(x.FId))
       .where(and(
         exists(select(1)),
-        x.FId.in(select(b.FId).from(b).asValue())
+        x.FId.in(select(b.FId).from(b))
       ))
       .groupBy(a.FId, b.FId, a.FSex)
       .having(count(a.FId).gte(1))
