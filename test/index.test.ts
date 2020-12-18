@@ -277,7 +277,31 @@ describe("MSSQL TESTS", function () {
     assert(item);
   });
 
-  it("update", async function () {
+  it("update(rowset, ...)", async function () {
+    const rowset = table<IItem>('Items').as('__t__')
+
+    const lines = await db.update(rowset, {
+      FName: '王宝强',
+      FAge: 35,
+      FSex: false
+    }, {
+      FId: 1
+    })
+    // const lines = await db.update<any>(
+    //   "Items",
+    //   {
+    //     FNAME: "冷蒙",
+    //     FAGE: 21,
+    //     FSEX: false,
+    //   },
+    //   {
+    //     FID: 1,
+    //   }
+    // );
+    assert(lines === 1);
+  });
+
+  it("update(string, ...)", async function () {
     const lines = await db.update<any>(
       "Items",
       {
@@ -644,6 +668,24 @@ describe("MSSQL TESTS", function () {
     const sql = db.compiler.compile(countSql)
     const copiedSql = db.compiler.compile(copiedCountSql)
     assert(sql.sql === copiedSql.sql, "克隆功能出现问题：" + sql.sql + '\n\n' + copiedSql.sql)
+  })
+
+  it('and/or 升级条件检查', function() {
+    const sql = select(1).where(and(
+      constant(1).eq(1),
+      constant(1).eq(1).or(constant(1).eq(1)),
+      or(
+        constant(1).eq(1),
+        constant(1).eq(1).or(constant(1).eq(1)),
+        field('name').in([1,2,3,4]),
+        field('name').in(...[1,2,3,4]),
+        field('name').in(select(1))
+      )
+    ))
+
+    const cmd = db.compiler.compile(sql)
+    console.log(cmd.sql)
+    assert(cmd.sql === 'SELECT 1 WHERE (1 = 1 AND (1 = 1 OR 1 = 1) AND (1 = 1 OR (1 = 1 OR 1 = 1) OR [name] IN (1,2,3,4) OR [name] IN (1,2,3,4) OR [name] IN (SELECT 1)))')
   })
 
 });
