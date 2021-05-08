@@ -2,14 +2,13 @@
   "name": "lubejs-mssql",
   "version": "2.0.0-beta.18",
   "description": "The lubejs driver for mssql.",
-  "main": "lib/index.js",
+  "main": "dist/index.js",
   "directories": {
-    "lib": "lib"
+    "dist": "dist"
   },
   "types": "lib/index.d.ts",
   "scripts": {
-    "test": "mocha --require ts-node/register --extensions ts,tsx 'test/**/*.{ts,tsx}'",
-    "test:ts": "mocha --full-trace test"
+    "test": "mocha --require ts-node/register --extensions ts,tsx 'test/**/*.{ts,tsx}'"
   },
   "keywords": [
     "mssql",
@@ -23,6 +22,7 @@
   "author": "jover",
   "license": "MIT",
   "dependencies": {
+    "@types/mssql": "^6.0.8",
     "lodash.merge": "^4.6.2",
     "lubejs": "^2.0.0-beta.20",
     "mssql": "^6.2.0"
@@ -33,7 +33,7 @@
     "@types/mockjs": "^1.0.2",
     "@typescript-eslint/parser": "^4.4.1",
     "commander": "^5.1.0",
-    "mocha": "^8.0.1",
+    "mocha": "^8.4.0",
     "mockjs": "^1.1.0",
     "ts-node": "^8.10.2",
     "typescript": "^3.9.6"

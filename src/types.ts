@@ -1,5 +1,5 @@
-const mssql = require('mssql')
-const { ISOLATION_LEVEL } = require("lubejs");
+import mssql from 'mssql'
+import { ISOLATION_LEVEL } from "../../lubejs";
 
 // const SCALAR_TYPE_MAPPING = new Map([
 //   [String, mssql.NVarChar(mssql.MAX)],
@@ -30,7 +30,7 @@ Object.entries(mssql.TYPES).forEach(([key, value]) => {
 /**
  * 将MSSQL字符串类型解析为mssql库的类型
  */
-exports.parseDbType = function parseDbType(dbType) {
+export function parseDbType(dbType) {
   const matched = TYPE_REG.exec(dbType)
   if (!matched) {
     throw new Error('错误的数据库类型名称：' + dbType)
@@ -48,7 +48,7 @@ exports.parseDbType = function parseDbType(dbType) {
 /**
  * 将 ScalarType 解析成mssql库的类型
  */
-exports.parseType = function parseType(type) {
+export function parseType(type) {
   if (!type) throw Error('类型不能为空！')
   const mssqlType = SCALAR_TYPE_MAPPING_STR[type]
 
@@ -67,9 +67,10 @@ const IsolationLevelMapps = {
   [ISOLATION_LEVEL.SNAPSHOT]: mssql.ISOLATION_LEVEL.SNAPSHOT,
 };
 
-exports.parseIsolationLevel = function parseIsolationLevel(level) {
+export function parseIsolationLevel(level: ISOLATION_LEVEL): number {
   const result = IsolationLevelMapps[level]
   if (result === undefined) {
     throw new Error('不受支持的事务隔离级别：' + level)
   }
+  return result;
 }

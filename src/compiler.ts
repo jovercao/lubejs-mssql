@@ -1,9 +1,14 @@
-const { Compiler } = require('lubejs')
+import { Compiler, CompileOptions } from '../../lubejs'
+
+export interface MssqlCompileOptions extends CompileOptions {
+
+}
 
 /**
  * 默认编译选项
  */
-const DefaultCompilerOptions = {
+export const DefaultCompilerOptions: MssqlCompileOptions = {
+  strict: true,
   /**
    * 标识符引用，左
    */
@@ -48,7 +53,7 @@ const TYPE_MAPPING = {
   bigint: 'BIGINT'
 }
 
-exports.MssqlCompiler = class MssqlCompiler extends Compiler {
+export class MssqlCompiler extends Compiler {
   constructor(options) {
     super(Object.assign({}, DefaultCompilerOptions, options))
   }

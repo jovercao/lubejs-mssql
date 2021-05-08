@@ -1,7 +1,12 @@
-const { PARAMETER_DIRECTION } = require("lubejs");
-const { parseDbType, parseType } = require("./types");
+import { ConnectionPool, Request } from "mssql";
+import { CompileOptions, Parameter, PARAMETER_DIRECTION, QueryHandler, QueryResult, ScalarType } from "../../lubejs";
+import { parseDbType, parseType } from "./types";
 
-exports.query = async function doQuery(driver, sql, params = [], options) {
+export type IDriver = {
+  request(): Request;
+}
+
+export  async function doQuery(driver: IDriver, sql: string, params: Parameter<any, string>[] = [], options: CompileOptions) {
   const request = await driver.request();
   params.forEach(
     ({ name, value, type, dbType, direction = PARAMETER_DIRECTION.INPUT }) => {
@@ -45,7 +50,7 @@ exports.query = async function doQuery(driver, sql, params = [], options) {
       res.returnValue = value;
     }
   });
-  const result = {
+  const result: QueryResult<any, any, any> = {
     rows: res.recordset,
     rowsAffected: res.rowsAffected[0],
     returnValue: res.returnValue,
@@ -53,7 +58,7 @@ exports.query = async function doQuery(driver, sql, params = [], options) {
   };
   if (res.recordsets) {
     // 仅MSSQL支持该属性，并不推荐使用
-    result._recordsets = res.recordsets;
+    Reflect.set(result, '_recordsets',res.recordsets);
   }
   return result;
 }
