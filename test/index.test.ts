@@ -1,7 +1,7 @@
-import assert = require('assert')
-import * as mock from 'mockjs'
-import * as _ from 'lodash'
-import * as program from 'commander'
+import assert from 'assert'
+import mock from 'mockjs'
+import _ from 'lodash'
+
 import {
   count,
   IDENTITY,
@@ -40,8 +40,16 @@ import {
   convert,
   NamedSelect,
   $with,
-  ConnectOptions
+  ConnectOptions,
+  ProxiedNamedSelect,
+  With,
+  RowObject,
+  Select,
+  DefaultRowObject,
+  type
 } from '../../lubejs'
+import config from './config.json'
+import driver from '../src/index'
 
 interface IItem {
   FId: number
@@ -50,6 +58,7 @@ interface IItem {
   FSex: boolean
   FCreateDate: Date
   Flag: ArrayBuffer
+  FParentId: number
 }
 
 // argv.option('-h, --host <host>', 'server name')
@@ -58,7 +67,7 @@ interface IItem {
 //   .option('-P, --port <port>', 'server port')
 //   .option('-d, --database <database>', 'database name')
 
-const argv: Record<string, string> = {}
+const argv: Record<string, any> = config
 let index = 0
 while (index < process.argv.length) {
   const arg = process.argv[index]
@@ -89,8 +98,7 @@ while (index < process.argv.length) {
 describe('MSSQL TESTS', function () {
   this.timeout(0)
   let db: Lube
-  const driver = require('..')
-  const dbConfig = {
+  const dbConfig: ConnectOptions = {
     driver,
     user: argv.user || 'sa',
     password: argv.password,
@@ -158,7 +166,8 @@ describe('MSSQL TESTS', function () {
       FAge INT,
       FSex BIT,
       FCreateDate DATETIME DEFAULT (GETDATE()),
-      Flag TIMESTAMP NOT NULL
+      Flag TIMESTAMP NOT NULL,
+      FParentID INT NULL,
     )`
   })
 
@@ -240,25 +249,29 @@ describe('MSSQL TESTS', function () {
 
   it('db.query($with(...))', async function () {
     const t = table<IItem>('Items').as('t')
-    const sql = select(t._).from(t)
-    const x = sql.as('x')
-    sql.union(x)
-    const d = $with(x)
-      .select(min(x.FId))
-      .from(x);
-    const minId = await db.queryScalar(d);
-    assert(minId >= 0)
+    const x = select(t._).from(t).where(t.FParentId.isNull()).as('x');
+    const i = table<IItem>('Items').as('i');
+    const y = x.as('y');
+
+
+    const sql = $with(x)
+      .select(x._).from(x)
+      .unionAll(
+        select(i._).from(i).join(x.as('y'), i.FParentId.eq(y.FId))
+      );
+    const datas = await db.query(sql);
   })
 
   it('db.insert(table, rows: Expression[])', async function () {
     let err: Error
     try {
-      const lines = await db.insert('Items', [
+      const lines = await db.insert<IItem>('Items', [
         '李莉',
         18,
         false,
         new Date(),
-        Buffer.from('abc')
+        Buffer.from('abc'),
+        null,
       ])
       assert(lines === 1)
     } catch (e) {
@@ -427,7 +440,7 @@ describe('MSSQL TESTS', function () {
         .else('女')
         .as('性别'),
       getDate().as('Now'),
-      makeFunc<number, number>('scalar', ['dbo', 'dosomething'])(100),
+      makeFunc<number, number>('scalar', ['dbo', 'dosomething'])(100).as('SomeThingResult'),
       // 子查询
       select(enclose(1))
         .asValue()
@@ -445,19 +458,20 @@ describe('MSSQL TESTS', function () {
       .limit(10)
       .orderBy(a.FId.asc())
 
-    let { rows } = await db.query(sql)
-    assert(_.isDate(rows[0].Now), '不是日期类型')
-    assert(rows[0].aid === 51, '数据不是预期结果')
-    assert(['男', '女'].includes(rows[0]['性别']), '性别不正确')
-    assert(rows.length === 10, '查询到的数据不正确')
+    let { rows: rows1 } = await db.query(sql)
+    assert(_.isDate(rows1[0].Now), '不是日期类型')
+    assert(rows1[0].aid === 51, '数据不是预期结果')
+    assert(['男', '女'].includes(rows1[0]['性别']), '性别不正确')
+    assert(rows1.length === 10, '查询到的数据不正确')
 
     const sql2 = select(a.FId, a.FSex)
       .from(a)
       .distinct()
-    await db.query(sql2)
+    const rows2 = (await db.query(sql2)).rows;
+    console.log(rows2[0].FId);
     const sql3 = select(count(star).as('count')).from(a)
-    rows = (await db.query(sql3)).rows
-    assert(rows[0].count > 0)
+    const rows3 = (await db.query(sql3)).rows;
+    assert(rows3[0].count > 0)
   })
 
   it('db.queryScalar(sql: Select)', async function () {
@@ -554,7 +568,7 @@ describe('MSSQL TESTS', function () {
   })
 
   it('db.query(sql: Execute)', async function () {
-    const p2 = output('o', 'string')
+    const p2 = output('o', type.string(0))
     const sql = execute('doProc', [1, p2])
     const res = await db.query(sql)
 
@@ -563,14 +577,14 @@ describe('MSSQL TESTS', function () {
   })
 
   it('db.execute(sp, [...args])', async function () {
-    const p2 = output('o', 'string')
+    const p2 = output('o', type.string(0))
     const res = await db.execute('doProc', [1, p2])
     assert(res.returnValue === 1)
     assert(p2.value === 'hello world')
   })
 
   it('convert', async () => {
-    const sql = select(value('2020-01-01T01:01:01+08:00').to('date'))
+    const sql = select(value('2020-01-01T01:01:01+08:00').to(type.date))
     const s = await db.queryScalar(sql)
     console.log(s)
   })

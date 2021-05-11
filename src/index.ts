@@ -16,7 +16,7 @@ import {
   Binary,
 } from '../../lubejs';
 
-const defaultConnectOptions: sql.config = {
+const DefaultConnectOptions: sql.config = {
   server: 'localhost',
   // 端口号
   port: 1433,
@@ -30,7 +30,7 @@ const defaultConnectOptions: sql.config = {
   parseJSON: true,
   // // 严格模式
   // strict: true
-}
+} as any;
 
 const defaultPoolOptions = {
   max: 10,
@@ -43,7 +43,7 @@ const defaultPoolOptions = {
  * @param config 连接选项
  */
 export const connect: Driver = async function(options: ConnectOptions): Promise<IDbProvider> {
-  const mssqlOptions: sql.config = Object.assign({}, defaultConnectOptions, options)
+  const mssqlOptions: sql.config = Object.assign({}, DefaultConnectOptions, options)
   mssqlOptions.server = (options.host + (options.instance ? '\\' + options.instance : '')) || 'localhost',
   mssqlOptions.pool = merge({}, defaultPoolOptions, {
     max: options.poolMax,
@@ -281,83 +281,83 @@ export const MS = builtIn('MS');
 /**
  * 最后一次插入数据的标识列值
  */
- export const IDENTITY= variant<number, '@@IDENTITY'>('@@IDENTITY');
+ export const IDENTITY= variant<number, '@IDENTITY'>('@IDENTITY');
  /**
   * 最后一次执行受影响函数
   */
- export const ROWCOUNT= variant<number, '@@ROWCOUNT'>('@@ROWCOUNT');
+ export const ROWCOUNT= variant<number, '@ROWCOUNT'>('@ROWCOUNT');
  /**
   * 返回自上次启动 Microsoft SQL Server以来连接或试图连接的次数。
   */
- export const CONNECTIONS= variant<number, '@@CONNECTIONS'>('@@CONNECTIONS');
+ export const CONNECTIONS= variant<number, '@CONNECTIONS'>('@CONNECTIONS');
  /**
   * 返回自上次启动 Microsoft SQL Server以来 CPU 的工作时间，单位为毫秒（基于系统计时器的分辨率）。
   */
- export const CPU_BUSY= variant<number, '@@CPU_BUSY'>('@@CPU_BUSY');
+ export const CPU_BUSY= variant<number, '@CPU_BUSY'>('@CPU_BUSY');
  /**
   * 返回 SET DATEFIRST 参数的当前值，SET DATEFIRST 参数指明所规定的每周第一天：1 对应星期一，2 对应星期二，依次类推，用 7 对应星期日。
   */
- export const DATEFIRST= variant<number, '@@DATEFIRST'>('@@DATEFIRST');
+ export const DATEFIRST= variant<number, '@DATEFIRST'>('@DATEFIRST');
  /**
   * 返回 Microsoft SQL Server自上次启动后用于执行输入和输出操作的时间，单位为毫秒（基于系统计时器的分辨率）。
   */
- export const IO_BUSY= variant<number, '@@IO_BUSY'>('@@IO_BUSY');
+ export const IO_BUSY= variant<number, '@IO_BUSY'>('@IO_BUSY');
  /**
   * 返回当前所使用语言的本地语言标识符(ID)。
   */
- export const LANGID= variant<number, '@@LANGID'>('@@LANGID');
+ export const LANGID= variant<number, '@LANGID'>('@LANGID');
  /**
   * 返回当前使用的语言名。
   */
- export const LANGUAGE= variant<string, '@@LANGUAGE'>('@@LANGUAGE');
+ export const LANGUAGE= variant<string, '@LANGUAGE'>('@LANGUAGE');
  /**
   * 返回 Microsoft SQL Server上允许的同时用户连接的最大数。返回的数不必为当前配置的数值。
   */
- export const MAX_CONNECTIONS= variant<number, '@@MAX_CONNECTIONS'>('@@MAX_CONNECTIONS');
+ export const MAX_CONNECTIONS= variant<number, '@MAX_CONNECTIONS'>('@MAX_CONNECTIONS');
  /**
   * 返回 Microsoft SQL Server自上次启动后从网络上读取的输入数据包数目。
   */
- export const PACK_RECEIVED= variant<number, '@@PACK_RECEIVED'>('@@PACK_RECEIVED');
+ export const PACK_RECEIVED= variant<number, '@PACK_RECEIVED'>('@PACK_RECEIVED');
  /**
   * 返回 Microsoft SQL Server自上次启动后写到网络上的输出数据包数目。
   */
- export const PACK_SENT= variant<number, '@@PACK_SENT'>('@@PACK_SENT');
+ export const PACK_SENT= variant<number, '@PACK_SENT'>('@PACK_SENT');
  /**
   * 返回自 SQL Server 上次启动后，在 Microsoft SQL Server连接上发生的网络数据包错误数。
   */
- export const PACKET_ERRORS= variant<number, '@@PACKET_ERRORS'>('@@PACKET_ERRORS');
+ export const PACKET_ERRORS= variant<number, '@PACKET_ERRORS'>('@PACKET_ERRORS');
  /**
   * 返回运行 Microsoft SQL Server的本地服务器名称。
   */
- export const SERVERNAME= variant<string, '@@SERVERNAME'>('@@SERVERNAME');
+ export const SERVERNAME= variant<string, '@SERVERNAME'>('@SERVERNAME');
  /**
-  * 返回 Microsoft SQL Server正在其下运行的注册表键名。若当前实例为默认实例，则 @@SERVICENAME 返回 MSSQLServer；若当前实例是命名实例，则该函数返回实例名。
+  * 返回 Microsoft SQL Server正在其下运行的注册表键名。若当前实例为默认实例，则 @SERVICENAME 返回 MSSQLServer；若当前实例是命名实例，则该函数返回实例名。
   */
- export const SERVICENAME= variant<string, '@@SERVICENAME'>('@@SERVICENAME');
+ export const SERVICENAME= variant<string, '@SERVICENAME'>('@SERVICENAME');
  /**
   * 返回当前用户进程的服务器进程标识符 (ID)。
   */
- export const SPID= variant<number, '@@SPID'>('@@SPID');
+ export const SPID= variant<number, '@SPID'>('@SPID');
  /**
   * 返回一刻度的微秒数。
   */
- export const TIMETICKS= variant<number, '@@TIMETICKS'>('@@TIMETICKS');
+ export const TIMETICKS= variant<number, '@TIMETICKS'>('@TIMETICKS');
  /**
   * 返回 Microsoft SQL Server自上次启动后，所遇到的磁盘读/写错误数。
   */
- export const TOTAL_ERRORS= variant<number, '@@TOTAL_ERRORS'>('@@TOTAL_ERRORS');
+ export const TOTAL_ERRORS= variant<number, '@TOTAL_ERRORS'>('@TOTAL_ERRORS');
  /**
   * 返回 Microsoft SQL Server自上次启动后写入磁盘的次数。
   */
- export const TOTAL_WRITE= variant<number, '@@TOTAL_WRITE'>('@@TOTAL_WRITE');
+ export const TOTAL_WRITE= variant<number, '@TOTAL_WRITE'>('@TOTAL_WRITE');
  /**
   * 返回 Microsoft SQL Server当前安装的日期、版本和处理器类型。
   */
- export const VERSION= variant<string, '@@VERSION'>('@@VERSION');
+ export const VERSION= variant<string, '@VERSION'>('@VERSION');
  /**
   * 返回 Microsoft SQL Server自上次启动后读取磁盘（不是读取高速缓存）的次数。
   */
- export const TOTAL_READ= variant<number, '@@TOTAL_READ'>('@@TOTAL_READ');
+ export const TOTAL_READ= variant<number, '@TOTAL_READ'>('@TOTAL_READ');
 
 
 /**
@@ -417,7 +417,7 @@ export const VARIANTS = {
    */
   SERVERNAME,
   /**
-   * 返回 Microsoft SQL Server正在其下运行的注册表键名。若当前实例为默认实例，则 @@SERVICENAME 返回 MSSQLServer；若当前实例是命名实例，则该函数返回实例名。
+   * 返回 Microsoft SQL Server正在其下运行的注册表键名。若当前实例为默认实例，则 @SERVICENAME 返回 MSSQLServer；若当前实例是命名实例，则该函数返回实例名。
    */
   SERVICENAME,
   /**
@@ -445,3 +445,138 @@ export const VARIANTS = {
    */
   TOTAL_READ,
 }
+
+
+// TODO: 声明数据库类型
+
+export type SQL_VARIANT = {
+  name: 'sql_variant' | 'sv';
+}
+
+export type SV = SQL_VARIANT;
+
+export type INTEGER = {
+  name: 'int' | 'integer';
+}
+
+export type INT = INTEGER;
+
+export type BIGINT = {
+  name: 'bint' | 'bigint';
+}
+
+export type BINT = BIGINT;
+
+export type SMALLINT = {
+  name: 'smallint' | 'sint';
+}
+
+export type SINT = SMALLINT;
+
+export type TINYINT = {
+  name: 'tinyint' | 'tint'
+}
+
+export type TINT = TINYINT;
+
+export type DECIMAL = {
+  name: 'decimal' | 'dec';
+  precision: number;
+  digit?: number;
+}
+
+export type DEC = DECIMAL;
+
+export type NUMERIC = {
+  name: 'numeric' | 'num';
+  precision: number;
+  digit?: number;
+}
+export type NUM = NUMERIC;
+
+export type REAL = {
+  name: 'real' | 'r';
+}
+
+export type R = REAL;
+
+export type FLOAT = {
+  name: 'float';
+  precision?: number;
+}
+
+export type MONEY = {
+  type: 'money' | 'mn';
+}
+
+export type MN = MONEY;
+
+export type SMALLMONEY = {
+  name: 'smallmoney' | 'smn'
+}
+
+export type SMN = SMALLMONEY;
+
+
+export type CHAR = {
+  name: 'char',
+  length: number;
+}
+
+export type NCHAR = {
+  name: 'nchar',
+  length: number;
+}
+
+export type VARCHAR = {
+  name: 'varchar';
+  length: number | 'MAX';
+}
+
+export type NVARCHAR = {
+  name: 'nvarchar';
+  length: number | 'MAX';
+}
+
+export type SYSNAME = {
+  name: 'sysname'
+}
+
+export type TEXT = {
+  name: 'text';
+  length: number;
+}
+
+export type NTEXT = {
+  name: 'ntext';
+  length: number;
+}
+
+export type DATATIME = {
+  name: 'datatime'
+}
+
+export type SMALLDATATIME = {
+  name: 'smalldatatime'
+}
+
+export type BINARY = {
+  name: 'binary';
+  length: number;
+}
+
+export type VARBINARY = {
+  name: 'varbinary';
+  length: number;
+}
+
+export type IMAGE = {
+  name: 'image'
+}
+
+export type BIT = {
+  name: 'bit'
+}
+
+export type MssqlDbType = SQL_VARIANT | INTEGER | INT | CHAR | VARCHAR | FLOAT | DECIMAL | BINARY | VARBINARY;
+

@@ -1,6 +1,6 @@
-import { ConnectionPool, Request } from "mssql";
-import { CompileOptions, Parameter, PARAMETER_DIRECTION, QueryHandler, QueryResult, ScalarType } from "../../lubejs";
-import { parseDbType, parseType } from "./types";
+import { Request } from "mssql";
+import { CompileOptions, Parameter, PARAMETER_DIRECTION, QueryResult } from "../../lubejs";
+import { toMssqlType } from "./types";
 
 export type IDriver = {
   request(): Request;
@@ -9,14 +9,11 @@ export type IDriver = {
 export  async function doQuery(driver: IDriver, sql: string, params: Parameter<any, string>[] = [], options: CompileOptions) {
   const request = await driver.request();
   params.forEach(
-    ({ name, value, type, dbType, direction = PARAMETER_DIRECTION.INPUT }) => {
+    ({ name, value, type, direction = PARAMETER_DIRECTION.INPUT }) => {
       let mssqlType;
       // 优先使用dbType
-      if (dbType) {
-        mssqlType = parseDbType(type);
-      } else if (type) {
-        mssqlType = parseType(type);
-      }
+
+      mssqlType = toMssqlType(type);
 
       if (direction === PARAMETER_DIRECTION.INPUT) {
         if (type) {
@@ -57,8 +54,7 @@ export  async function doQuery(driver: IDriver, sql: string, params: Parameter<a
     output: res.output,
   };
   if (res.recordsets) {
-    // 仅MSSQL支持该属性，并不推荐使用
-    Reflect.set(result, '_recordsets',res.recordsets);
+    result.rowsets = res.recordsets;
   }
   return result;
 }

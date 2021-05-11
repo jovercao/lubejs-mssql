@@ -12,6 +12,7 @@
     "charset": "utf8",
     "allowJs": false,
     "pretty": true,
+    "resolveJsonModule": true,
     // "lib": [],                             /* Specify library files to be included in the compilation. */
     // "allowJs": true,                       /* Allow javascript files to be compiled. */
     // "checkJs": true,                       /* Report errors in .js files. */
@@ -80,5 +81,8 @@
   ],
   "exclude": [
     "node_modules"
+  ],
+  "files": [
+    "./typings/index.d.ts"
   ]
 }

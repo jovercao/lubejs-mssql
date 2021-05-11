@@ -1,10 +1,8 @@
 import mssql from "mssql";
 import { doQuery } from "./query";
-import { parseIsolationLevel } from "./types";
+import { toMssqlIsolationLevel } from "./types";
 import { MssqlCompiler } from "./compiler";
-import { CompileOptions, IDbProvider, ISOLATION_LEVEL, Parameter, ScalarType, Transaction } from "../../lubejs";
-
-
+import { CompileOptions, IDbProvider, ISOLATION_LEVEL, Parameter, Transaction } from "../../lubejs";
 
 export class MssqlProvider implements IDbProvider {
   constructor(private _pool: mssql.ConnectionPool, options: CompileOptions) {
@@ -20,7 +18,7 @@ export class MssqlProvider implements IDbProvider {
 
   async beginTrans(isolationLevel: ISOLATION_LEVEL = ISOLATION_LEVEL.READ_COMMIT): Promise<Transaction> {
     const trans = this._pool.transaction();
-    await trans.begin(parseIsolationLevel(isolationLevel));
+    await trans.begin(toMssqlIsolationLevel(isolationLevel));
     return {
       async query(sql, params) {
         const res = await doQuery(trans, sql, params, this.compiler.options);
@@ -43,7 +41,3 @@ export class MssqlProvider implements IDbProvider {
     await this._pool.close();
   }
 }
-
-module.exports = {
-  Provider: MssqlProvider,
-};
