@@ -3,32 +3,37 @@ import { DbType, ISOLATION_LEVEL } from "../../lubejs";
 
 export function toMssqlType(type: DbType): mssql.ISqlType {
   switch(type.name) {
-    case 'binary':
+    case 'BINARY':
       return mssql.Binary();
-    case 'boolean':
+    case 'BOOLEAN':
       return mssql.Bit();
-    case 'date':
+    case 'DATE':
       return mssql.Date();
-    case 'datetime':
+    case 'DATETIME':
       return mssql.DateTimeOffset();
-    case 'float':
+    case 'FLOAT':
       return mssql.Real();
-    case 'double':
+    case 'DOUBLE':
       return mssql.Float();
-    case 'int8':
+    case 'INT8':
       return mssql.TinyInt();
-    case 'int16':
+    case 'INT16':
       return mssql.SmallInt();
-    case 'int32':
+    case 'INT32':
       return mssql.Int();
-    case 'int64':
+    case 'INT64':
       return mssql.BigInt();
-    case 'numeric':
+    case 'NUMERIC':
       return mssql.Numeric(type.precision, type.digit);
-    case 'string':
+    case 'STRING':
       return mssql.VarChar(type.length);
-    case 'uuid':
+    case 'UUID':
       return mssql.UniqueIdentifier();
+    case 'ROWFLAG':
+      return mssql.BigInt();
+    case 'LIST':
+    case 'OBJECT':
+      return mssql.NVarChar(mssql.MAX);
     default:
       throw new Error(`Unsupport data type ${type['name']}`)
   }

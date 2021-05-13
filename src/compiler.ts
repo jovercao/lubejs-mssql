@@ -49,32 +49,37 @@ export class MssqlCompiler extends Compiler {
 
   protected compileType (type: DbType): string {
     switch (type.name) {
-      case 'string':
+      case 'STRING':
         return `VARCHAR(${type.length === 0 ? 'MAX' : length})`
-      case 'int8':
+      case 'INT8':
         return 'TINYINT'
-      case 'int16':
+      case 'INT16':
         return 'SMALLINT'
-      case 'int32':
+      case 'INT32':
         return 'INT'
-      case 'int64':
+      case 'INT64':
         return 'BIGINT'
-      case 'binary':
+      case 'BINARY':
         return `VARBINARY(${type.length === 0 ? 'MAX' : type.length})`
-      case 'boolean':
+      case 'BOOLEAN':
         return 'BIT'
-      case 'date':
+      case 'DATE':
         return 'DATE'
-      case 'datetime':
+      case 'DATETIME':
         return 'DATETIMEOFFSET(8)'
-      case 'float':
+      case 'FLOAT':
         return 'REAL'
-      case 'double':
+      case 'DOUBLE':
         return 'FLOAT(53)'
-      case 'numeric':
+      case 'NUMERIC':
         return `NUMERIC(${type.precision}, ${type.digit})`
-      case 'uuid':
+      case 'UUID':
         return 'UNIQUEIDENTIFIER'
+      case 'OBJECT':
+      case 'LIST':
+        return 'NVARCHAR(MAX)'
+      case 'ROWFLAG':
+        return 'TIMESTAMP'
       default:
         throw new Error(`Unsupport data type ${type['name']}`)
     }

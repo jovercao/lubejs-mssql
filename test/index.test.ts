@@ -757,4 +757,11 @@ describe('MSSQL TESTS', function () {
       'SELECT 1 WHERE (1 = 1 AND (1 = 1 OR 1 = 1) AND (1 = 1 OR (1 = 1 OR 1 = 1) OR [name] IN (1,2,3,4) OR [name] IN (1,2,3,4) OR [name] IN (SELECT 1)))'
     )
   })
+
+
+  it('queryable', async () => {
+    const item = table<IItem>('Items');
+    const items = await db.getQueryable(item).toArray()
+    console.log(items);
+  })
 })
