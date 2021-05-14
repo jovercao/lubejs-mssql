@@ -19,13 +19,17 @@
     "sqlserver",
     "mssqlserver"
   ],
+  "files": [
+    "dist"
+  ],
   "author": "jover",
   "license": "MIT",
   "dependencies": {
     "@types/mssql": "^6.0.8",
     "lodash.merge": "^4.6.2",
     "lubejs": "^2.0.0-beta.20",
-    "mssql": "^6.2.0"
+    "mssql": "^6.3.2",
+    "tedious": "^6.7.0"
   },
   "devDependencies": {
     "@types/lodash": "^4.14.157",

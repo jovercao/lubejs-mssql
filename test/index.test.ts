@@ -48,8 +48,9 @@ import {
   DefaultRowObject,
   type
 } from '../../lubejs'
-import config from './config.json'
 import driver from '../src/index'
+import path from 'path'
+import fs from 'fs'
 
 interface IItem {
   FId: number
@@ -67,6 +68,7 @@ interface IItem {
 //   .option('-P, --port <port>', 'server port')
 //   .option('-d, --database <database>', 'database name')
 
+const config = (fs.existsSync(path.join(__dirname, './config.json'))) ? require('./config.json') : {}
 const argv: Record<string, any> = config
 let index = 0
 while (index < process.argv.length) {
@@ -105,16 +107,15 @@ describe('MSSQL TESTS', function () {
     host: argv.host || 'localhost',
     // instance: 'MSSQLSERVER',
     database: argv.database || 'TEST',
-    trustedConnection: argv.user ? false : true,
     port: (argv.port && parseInt(argv.port)) || 1433,
     // 最小值
-    poolMin: 0,
+    minConnections: 0,
     // 最大值
-    poolMax: 5,
+    maxConnections: 5,
     // 闲置连接关闭等待时间
-    idelTimeout: 30000,
+    recoveryConnection: 30000,
     // 连接超时时间
-    connectTimeout: 15000,
+    connectionTimeout: 15000,
     // 请求超时时间
     requestTimeout: 15000
   }
