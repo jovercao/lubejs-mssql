@@ -1,6 +1,6 @@
 import sql from 'mssql'
 import { MssqlProvider } from './provider'
-import { DefaultCompilerOptions, MssqlCompileOptions } from './compiler'
+import { DefaultCompilerOptions, MssqlCompileOptions } from './compile'
 import {
   Driver,
   makeFunc,

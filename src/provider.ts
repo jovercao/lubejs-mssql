@@ -1,7 +1,7 @@
 import mssql from "mssql";
 import { doQuery } from "./query";
 import { toMssqlIsolationLevel } from "./types";
-import { MssqlCompiler } from "./compiler";
+import { MssqlCompiler } from "./compile";
 import { CompileOptions, IDbProvider, ISOLATION_LEVEL, Parameter, Transaction } from "../../lubejs";
 
 export class MssqlProvider implements IDbProvider {

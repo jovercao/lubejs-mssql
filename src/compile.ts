@@ -1,4 +1,4 @@
-import { Compiler, CompileOptions, DbType, Select, Parameter, ConvertOperation, AST } from '../../lubejs'
+import { Compiler, CompileOptions, DbType, Select, Parameter, ConvertOperation, AST } from '../../lubejs/dist'
 
 export interface MssqlCompileOptions extends CompileOptions {}
 

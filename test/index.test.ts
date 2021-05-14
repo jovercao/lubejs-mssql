@@ -580,8 +580,11 @@ describe('MSSQL TESTS', function () {
   })
 
   it('convert', async () => {
-    const sql = select(value('2020-01-01T01:01:01+08:00').to(type.date))
-    const s = await db.queryScalar(sql)
+    const sql = select({
+      f1: SQL.val('2020-01-01T01:01:01+08:00').to(type.int64),
+      f2: SQL.val(0)
+    })
+    const s = (await db.query(sql)).rows
     console.log(s)
   })
 
@@ -747,7 +750,6 @@ describe('MSSQL TESTS', function () {
     )
 
     const cmd = db.compiler.compile(sql)
-    console.log(cmd.sql)
     assert(
       cmd.sql ===
       'SELECT 1 WHERE (1 = 1 AND (1 = 1 OR 1 = 1) AND (1 = 1 OR (1 = 1 OR 1 = 1) OR [name] IN (1,2,3,4) OR [name] IN (1,2,3,4) OR [name] IN (SELECT 1)))'
