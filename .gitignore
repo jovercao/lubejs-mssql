@@ -3,3 +3,4 @@ dist
 logs
 .vscode
 test/config.json
+lubejs-mssql-*.tgz
