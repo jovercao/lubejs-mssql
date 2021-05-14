@@ -46,7 +46,9 @@ import {
   RowObject,
   Select,
   DefaultRowObject,
-  type
+  type,
+  SQL_SYMBOLE,
+  val
 } from '../../lubejs'
 import driver from '../src/index'
 import path from 'path'
@@ -579,13 +581,27 @@ describe('MSSQL TESTS', function () {
     assert(p2.value === 'hello world')
   })
 
-  it('convert', async () => {
+  it.only('convert', async () => {
+
+    const number = 1000
+    const date = new Date();
+    const str = '1000';
+    const bin = Buffer.from('abc')
+
     const sql = select({
-      f1: SQL.val('2020-01-01T01:01:01+08:00').to(type.int64),
-      f2: SQL.val(0)
+      strToDate: val(date.toISOString()).to(type.datetime),
+      strToint32: val(str).to(type.int32),
+      int32ToStr: val(number).to(type.string(100)),
+      strToNumbice: val(str).to(type.numeric(18, 2)),
+      boolean: val(true).to(type.boolean),
+      binary: val(bin)
     })
-    const s = (await db.query(sql)).rows
-    console.log(s)
+    const { rows: [data] } = await db.query(sql)
+    assert.strictEqual(data.strToDate.toISOString(), date.toISOString())
+    assert.strictEqual(data.strToint32, number)
+    assert.strictEqual(data.strToNumbice, number)
+    assert.strictEqual(data.int32ToStr, str)
+    assert.strictEqual(data.binary.toString(), bin.toString())
   })
 
   it('AST.clone', async () => {

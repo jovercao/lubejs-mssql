@@ -50,7 +50,7 @@ export class MssqlCompiler extends Compiler {
   protected compileType (type: DbType): string {
     switch (type.name) {
       case 'STRING':
-        return `VARCHAR(${type.length === 0 ? 'MAX' : length})`
+        return `VARCHAR(${type.length === 0 ? 'MAX' : type.length})`
       case 'INT8':
         return 'TINYINT'
       case 'INT16':
@@ -66,7 +66,7 @@ export class MssqlCompiler extends Compiler {
       case 'DATE':
         return 'DATE'
       case 'DATETIME':
-        return 'DATETIMEOFFSET(8)'
+        return 'DATETIMEOFFSET(7)'
       case 'FLOAT':
         return 'REAL'
       case 'DOUBLE':
