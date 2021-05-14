@@ -1,12 +1,12 @@
-import { Request } from "mssql";
-import { CompileOptions, Parameter, PARAMETER_DIRECTION, QueryResult } from "../../lubejs";
+import { IResult, Request } from "mssql";
+import { CompileOptions, Parameter, PARAMETER_DIRECTION, QueryResult, ScalarType } from "../../lubejs";
 import { toMssqlType } from "./types";
 
 export type IDriver = {
   request(): Request;
 }
 
-export  async function doQuery(driver: IDriver, sql: string, params: Parameter<any, string>[] = [], options: CompileOptions) {
+export  async function doQuery(driver: IDriver, sql: string, params: Parameter<ScalarType, string>[] = [], options: CompileOptions) {
   const request = await driver.request();
   params.forEach(
     ({ name, value, type, direction = PARAMETER_DIRECTION.INPUT }) => {
@@ -33,26 +33,26 @@ export  async function doQuery(driver: IDriver, sql: string, params: Parameter<a
       }
     }
   );
-  let res;
+  let res: IResult<any>;
   try {
     res = await request.query(sql);
   } catch (ex) {
     await request.cancel();
     throw ex;
   }
-  Object.entries(res.output).forEach(([name, value]) => {
-    const p = params.find((p) => p.name === name);
-    p.value = value;
-    if (p.name === options.returnParameterName) {
-      res.returnValue = value;
-    }
-  });
   const result: QueryResult<any, any, any> = {
     rows: res.recordset,
     rowsAffected: res.rowsAffected[0],
-    returnValue: res.returnValue,
     output: res.output,
   };
+  Object.entries(res.output).forEach(([name, value]) => {
+    const p = params.find((p) => p.name === name);
+    // 回写输出参数
+    p.value = value;
+    if (p.name === options.returnParameterName) {
+      result.returnValue = value;
+    }
+  });
   if (res.recordsets) {
     result.rowsets = res.recordsets;
   }

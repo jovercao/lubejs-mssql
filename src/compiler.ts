@@ -1,4 +1,4 @@
-import { Compiler, CompileOptions, DbType } from '../../lubejs'
+import { Compiler, CompileOptions, DbType, Select, Parameter, ConvertOperation, AST } from '../../lubejs'
 
 export interface MssqlCompileOptions extends CompileOptions {}
 
@@ -85,12 +85,12 @@ export class MssqlCompiler extends Compiler {
     }
   }
 
-  compileDate (date) {
+  compileDate (date: Date) {
     const str = super.compileDate(date)
     return `CONVERT(DATETIMEOFFSET(7), ${str})`
   }
 
-  compileConvert (convert, params, parent) {
+  compileConvert (convert: ConvertOperation, params: Set<Parameter>, parent: AST): string {
     return `CONVERT(${this.compileType(convert.$to)}, ${this.compileExpression(
       convert.$expr,
       params,
@@ -98,6 +98,19 @@ export class MssqlCompiler extends Compiler {
     )})`
   }
 
+  protected compileOffsetLimit(select: Select<any>, params: Set<Parameter>): string {
+    let sql = ''
+    if (select.$offset === undefined && select.$limit === undefined) return sql;
+    if (!select.$sorts) {
+      select.orderBy(1);
+      sql += ' ORDER BY 1';
+    }
+    sql += ` OFFSET ${select.$offset || 0} ROWS`
+    if (typeof select.$limit === 'number') {
+      sql += ` FETCH NEXT ${select.$limit} ROWS ONLY`
+    }
+    return sql
+  }
   // compileColumn(col, params) {
   //   return `${this.quoted(col.name)} = ${this.compileExpression(col.$expr, params, col)}`
   // }

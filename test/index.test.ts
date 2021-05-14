@@ -562,11 +562,6 @@ describe('MSSQL TESTS', function () {
     assert(rows.length > 0)
   })
 
-  it('db.delete', async function () {
-    const lines = await db.delete('Items')
-    assert(lines >= 1)
-  })
-
   it('db.query(sql: Execute)', async function () {
     const p2 = output('o', type.string(0))
     const sql = execute('doProc', [1, p2])
@@ -758,10 +753,33 @@ describe('MSSQL TESTS', function () {
     )
   })
 
-
   it('queryable', async () => {
     const item = table<IItem>('Items');
-    const items = await db.getQueryable(item).toArray()
-    console.log(items);
+    const list = await db.getQueryable(item)
+      .filter(t => t.FId.neq(1))
+      .map(t => ({
+        name: t.FName,
+        age: t.FAge
+      }))
+      .take(100)
+      .sort(p => [p.age.desc()])
+      .toArray()
+    console.log(list)
+
+    const i = await db.getQueryable(item)
+      .find(t => t.FId.eq(1))
+      .first()
+    console.log(i)
+
+    const j = await db.getQueryable(item).groupBy(t => ({
+      age: t.FAge,
+      count: count(t.FId)
+    }), t => [t.FAge]).toArray()
+    console.log(j)
+  })
+
+  it('db.delete', async function () {
+    const lines = await db.delete('Items')
+    assert(lines >= 1)
   })
 })

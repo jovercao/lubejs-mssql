@@ -8,7 +8,7 @@
   },
   "types": "lib/index.d.ts",
   "scripts": {
-    "test": "mocha --require ts-node/register --extensions ts,tsx 'test/**/*.{ts,tsx}'"
+    "test": "mocha --fulltrace --full-trace --require ts-node/register --extensions ts,tsx 'test/**/*.{ts,tsx}'"
   },
   "keywords": [
     "mssql",
