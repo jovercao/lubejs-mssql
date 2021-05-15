@@ -1,5 +1,5 @@
-import { IDENTITY } from '.'
-import { Compiler, CompileOptions, DbType, Select, Parameter, ConvertOperation, AST, IdentityValue } from '../../lubejs/dist'
+import { IDENTITY } from './index'
+import { Compiler, CompileOptions, DbType, Select, Parameter, ConvertOperation, AST, IdentityValue } from '../../lubejs'
 
 export interface MssqlCompileOptions extends CompileOptions {}
 
