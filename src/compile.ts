@@ -1,4 +1,5 @@
-import { Compiler, CompileOptions, DbType, Select, Parameter, ConvertOperation, AST } from '../../lubejs/dist'
+import { IDENTITY } from '.'
+import { Compiler, CompileOptions, DbType, Select, Parameter, ConvertOperation, AST, IdentityValue } from '../../lubejs/dist'
 
 export interface MssqlCompileOptions extends CompileOptions {}
 
@@ -45,6 +46,10 @@ export const DefaultCompilerOptions: MssqlCompileOptions = {
 export class MssqlCompiler extends Compiler {
   constructor (options: MssqlCompileOptions) {
     super(Object.assign({}, DefaultCompilerOptions, options))
+  }
+
+  protected compileIdentityValue(ast: IdentityValue, params: Set<Parameter<any, string>>): string {
+    return this.compileVariant(IDENTITY)
   }
 
   protected compileType (type: DbType): string {
