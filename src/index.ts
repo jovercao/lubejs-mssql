@@ -851,3 +851,4 @@ export type MssqlDbType =
   | DECIMAL
   | BINARY
   | VARBINARY
+
