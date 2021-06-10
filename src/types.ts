@@ -31,7 +31,7 @@ export function toMssqlType(type: DbType): mssql.ISqlType {
       return mssql.UniqueIdentifier();
     case 'ROWFLAG':
       return mssql.BigInt();
-    case 'LIST':
+    case 'ARRAY':
     case 'OBJECT':
       return mssql.NVarChar(mssql.MAX);
     default:

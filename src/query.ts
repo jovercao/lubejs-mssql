@@ -1,12 +1,12 @@
 import { IResult, Request } from "mssql";
-import { CompileOptions, Parameter, PARAMETER_DIRECTION, QueryResult, ScalarType } from "../../lubejs";
+import { CompileOptions, Parameter, PARAMETER_DIRECTION, QueryResult, Scalar } from "../../lubejs";
 import { toMssqlType } from "./types";
 
 export type IDriver = {
   request(): Request;
 }
 
-export  async function doQuery(driver: IDriver, sql: string, params: Parameter<ScalarType, string>[] = [], options: CompileOptions) {
+export  async function doQuery(driver: IDriver, sql: string, params: Parameter<Scalar, string>[] = [], options: CompileOptions) {
   const request = await driver.request();
   params.forEach(
     ({ name, value, type, direction = PARAMETER_DIRECTION.INPUT }) => {
@@ -48,7 +48,7 @@ export  async function doQuery(driver: IDriver, sql: string, params: Parameter<S
   Object.entries(res.output).forEach(([name, value]) => {
     const p = params.find((p) => p.name === name);
     // 回写输出参数
-    p.value = value;
+    p.value = value as Scalar;
     if (p.name === options.returnParameterName) {
       result.returnValue = value;
     }
