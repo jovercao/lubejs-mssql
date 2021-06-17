@@ -54,3 +54,41 @@ export function toMssqlIsolationLevel(level: ISOLATION_LEVEL): number {
   }
   return result;
 }
+
+export function dbTypeToSql(type: DbType): string {
+  switch (type.name) {
+    case "STRING":
+      return `VARCHAR(${type.length === DbType.MAX ? "MAX" : type.length})`;
+    case "INT8":
+      return "TINYINT";
+    case "INT16":
+      return "SMALLINT";
+    case "INT32":
+      return "INT";
+    case "INT64":
+      return "BIGINT";
+    case "BINARY":
+      return `VARBINARY(${type.length === 0 ? "MAX" : type.length})`;
+    case "BOOLEAN":
+      return "BIT";
+    case "DATE":
+      return "DATE";
+    case "DATETIME":
+      return "DATETIMEOFFSET(7)";
+    case "FLOAT":
+      return "REAL";
+    case "DOUBLE":
+      return "FLOAT(53)";
+    case "NUMERIC":
+      return `NUMERIC(${type.precision}, ${type.digit})`;
+    case "UUID":
+      return "UNIQUEIDENTIFIER";
+    case "OBJECT":
+    case "ARRAY":
+      return "NVARCHAR(MAX)";
+    case "ROWFLAG":
+      return "TIMESTAMP";
+    default:
+      throw new Error(`Unsupport data type ${type["name"]}`);
+  }
+}

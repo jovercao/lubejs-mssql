@@ -1,13 +1,29 @@
-import mssql from "mssql";
-import { doQuery } from "./query";
-import { toMssqlIsolationLevel } from "./types";
-import { MssqlCompiler } from "./compile";
-import { CompileOptions, IDbProvider, ISOLATION_LEVEL, Parameter, Transaction } from "../../lubejs";
+import mssql from 'mssql';
+import { doQuery } from './query';
+import { toMssqlIsolationLevel } from './types';
+import { MssqlCompiler } from './compile';
+import {
+  CompileOptions,
+  DbProvider,
+  ISOLATION_LEVEL,
+  Parameter,
+  Transaction,
+  MigrateScripter,
+  DatabaseSchema,
+} from '../../lubejs';
+import { MssqlMigrateScripter } from './migrate-scripter';
 
-export class MssqlProvider implements IDbProvider {
+export class MssqlProvider implements DbProvider {
   constructor(private _pool: mssql.ConnectionPool, options: CompileOptions) {
     this.compiler = new MssqlCompiler(options);
+    this.scripter = new MssqlMigrateScripter(this.compiler);
   }
+
+  getSchema(): Promise<DatabaseSchema> {
+    throw new Error('Method not implemented.');
+  }
+
+  readonly scripter: MigrateScripter;
 
   readonly compiler: MssqlCompiler;
 
@@ -16,7 +32,9 @@ export class MssqlProvider implements IDbProvider {
     return res;
   }
 
-  async beginTrans(isolationLevel: ISOLATION_LEVEL = ISOLATION_LEVEL.READ_COMMIT): Promise<Transaction> {
+  async beginTrans(
+    isolationLevel: ISOLATION_LEVEL = ISOLATION_LEVEL.READ_COMMIT
+  ): Promise<Transaction> {
     const trans = this._pool.transaction();
     await trans.begin(toMssqlIsolationLevel(isolationLevel));
     return {

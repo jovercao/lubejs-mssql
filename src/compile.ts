@@ -9,7 +9,6 @@ import {
   dateDiff,
   datePart,
   DATE_PART,
-  dbTypeToSql,
   getDate,
   IDENTITY,
   len,
@@ -27,6 +26,29 @@ import {
   sysUtcDateTime,
   switchOffset,
   dateAdd,
+  isNull,
+  abs,
+  exp,
+  ceiling,
+  floor,
+  log,
+  log10,
+  pi,
+  power,
+  radians,
+  degrees,
+  rand,
+  round,
+  sign,
+  sqrt,
+  cos,
+  sin,
+  tan,
+  acos,
+  asin,
+  atan,
+  atan2,
+  cot,
 } from "./build-in";
 import {
   Compiler,
@@ -42,7 +64,13 @@ import {
   Scalar,
   Binary,
   TsTypeOf,
+  mod,
+  TableVariantDeclare,
+  Insert,
+  AST,
 } from "../../lubejs";
+
+import { dbTypeToSql } from "./types";
 
 export interface MssqlCompileOptions extends CompileOptions {}
 
@@ -112,6 +140,95 @@ export const DefaultCompilerOptions: MssqlCompileOptions = {
 // }
 
 export class MssqlStandardTranslator implements StandardTranslator {
+  abs(value: CompatibleExpression<number>): Expression<number> {
+    return abs(value);
+  }
+  exp(value: CompatibleExpression<number>): Expression<number> {
+    return exp(value);
+  }
+
+  ceil(value: CompatibleExpression<number>): Expression<number> {
+    return ceiling(value);
+  }
+  floor(value: CompatibleExpression<number>): Expression<number> {
+    return floor(value);
+  }
+  ln(value: CompatibleExpression<number>): Expression<number> {
+    return log10(value);
+  }
+  log(value: CompatibleExpression<number>): Expression<number> {
+    return log(value);
+  }
+  mod(
+    value: CompatibleExpression<number>,
+    x: CompatibleExpression<number>
+  ): Expression<number> {
+    return mod(value, x);
+  }
+  pi(): Expression<number> {
+    return pi();
+  }
+  power(
+    a: CompatibleExpression<number>,
+    b: CompatibleExpression<number>
+  ): Expression<number> {
+    return power(a, b);
+  }
+  radians(value: CompatibleExpression<number>): Expression<number> {
+    return radians(value);
+  }
+  degrees(value: CompatibleExpression<number>): Expression<number> {
+    return degrees(value);
+  }
+  random(): Expression<number> {
+    return rand();
+  }
+  round(
+    value: CompatibleExpression<number>,
+    s?: CompatibleExpression<number>
+  ): Expression<number> {
+    return round(value, s);
+  }
+  sign(value: CompatibleExpression<number>): Expression<number> {
+    return sign(value);
+  }
+  sqrt(value: CompatibleExpression<number>): Expression<number> {
+    return sqrt(value);
+  }
+
+  cos(value: CompatibleExpression<number>): Expression<number> {
+    return cos(value);
+  }
+
+  sin(value: CompatibleExpression<number>): Expression<number> {
+    return sin(value);
+  }
+  tan(value: CompatibleExpression<number>): Expression<number> {
+    return tan(value);
+  }
+  acos(value: CompatibleExpression<number>): Expression<number> {
+    return acos(value);
+  }
+  asin(value: CompatibleExpression<number>): Expression<number> {
+    return asin(value);
+  }
+  atan(value: CompatibleExpression<number>): Expression<number> {
+    return atan(value);
+  }
+  atan2(value: CompatibleExpression<number>): Expression<number> {
+    return atan2(value);
+  }
+  cot(value: CompatibleExpression<number>): Expression<number> {
+    return cot(value);
+  }
+
+  isNull<T extends Scalar>(
+    value: CompatibleExpression<T>,
+    defaultValue: CompatibleExpression<T>
+  ): Expression<T> {
+    return isNull(value, defaultValue);
+  }
+
   count(expr: Star | CompatibleExpression<Scalar>): Expression<number> {
     return count(expr);
   }
@@ -303,27 +420,45 @@ export class MssqlStandardTranslator implements StandardTranslator {
     return dateDiff(DATE_PART.SECOND, start, end);
   }
 
-  addDays(date: CompatibleExpression<Date>, days: CompatibleExpression<number>): Expression<Date> {
+  addDays(
+    date: CompatibleExpression<Date>,
+    days: CompatibleExpression<number>
+  ): Expression<Date> {
     return dateAdd(DATE_PART.DAY, days, date);
   }
 
-  addMonths(date: CompatibleExpression<Date>, months: CompatibleExpression<number>): Expression<Date> {
+  addMonths(
+    date: CompatibleExpression<Date>,
+    months: CompatibleExpression<number>
+  ): Expression<Date> {
     return dateAdd(DATE_PART.MONTH, months, date);
   }
 
-  addYears(date: CompatibleExpression<Date>, years: CompatibleExpression<number>): Expression<Date> {
+  addYears(
+    date: CompatibleExpression<Date>,
+    years: CompatibleExpression<number>
+  ): Expression<Date> {
     return dateAdd(DATE_PART.YEAR, years, date);
   }
 
-  addHours(date: CompatibleExpression<Date>, hours: CompatibleExpression<number>): Expression<Date> {
+  addHours(
+    date: CompatibleExpression<Date>,
+    hours: CompatibleExpression<number>
+  ): Expression<Date> {
     return dateAdd(DATE_PART.HOUR, hours, date);
   }
 
-  addMinutes(date: CompatibleExpression<Date>, minutes: CompatibleExpression<number>): Expression<Date> {
+  addMinutes(
+    date: CompatibleExpression<Date>,
+    minutes: CompatibleExpression<number>
+  ): Expression<Date> {
     return dateAdd(DATE_PART.MINUTE, minutes, date);
   }
 
-  addSeconds(date: CompatibleExpression<Date>, seconds: CompatibleExpression<number>): Expression<Date> {
+  addSeconds(
+    date: CompatibleExpression<Date>,
+    seconds: CompatibleExpression<number>
+  ): Expression<Date> {
     return dateAdd(DATE_PART.SECOND, seconds, date);
   }
 
@@ -381,7 +516,7 @@ export class MssqlStandardTranslator implements StandardTranslator {
    * @param str
    * @returns
    */
-  rtrim(str: CompatibleExpression<string>): Expression<string> {
+  trimEnd(str: CompatibleExpression<string>): Expression<string> {
     return rtrim(str);
   }
   /**
@@ -408,7 +543,7 @@ export class MssqlStandardTranslator implements StandardTranslator {
    * @param search
    * @returns
    */
-  indexof(
+  strpos(
     str: CompatibleExpression<string>,
     search: CompatibleExpression<string>,
     startAt?: CompatibleExpression<number>
@@ -425,7 +560,7 @@ export class MssqlStandardTranslator implements StandardTranslator {
     return ascii(str);
   }
 
-  charFromAscii(code: CompatibleExpression<number>): Expression<string> {
+  asciiChar(code: CompatibleExpression<number>): Expression<string> {
     return char(code);
   }
 
@@ -433,7 +568,7 @@ export class MssqlStandardTranslator implements StandardTranslator {
     return unicode(str);
   }
 
-  charFromUnicode(code: CompatibleExpression<number>): Expression<string> {
+  unicodeChar(code: CompatibleExpression<number>): Expression<string> {
     return char(code);
   }
 }
@@ -441,6 +576,56 @@ export class MssqlStandardTranslator implements StandardTranslator {
 const defaultTranslator = new MssqlStandardTranslator();
 
 export class MssqlCompiler extends Compiler {
+  protected compileInsert(
+    insert: Insert,
+    params: Set<Parameter<Scalar, string>>,
+    parent?: AST
+  ): string {
+    const sql = super.compileInsert(insert, params, parent);
+    if (!insert.$identityInsert) return sql;
+    return `SET IDENTITY_INSERT ON
+${sql}
+SET IDENTITY_INSERT OFF
+`;
+  }
+
+  protected compileTableVariantDeclare(
+    declare: TableVariantDeclare<any>
+  ): string {
+    throw new Error(`待完成!`);
+//     if (declare.$schema.foreignKeys?.length > 0) {
+//       throw new Error(`Table variant is not support foreign key at mssql.`);
+//     }
+//     return `DECLARE @${this.stringifyIdentifier(declare.$name)} TABLE(
+// ${[
+//   ...declare.$schema.columns.map((column) => {
+//     if (column.isCalculate) {
+//       return `${this.quoted(column.name)} AS ${column.calculateExpression}`;
+//     }
+//     let columnDesc = `${this.quoted(column.name)} ${this.compileType(
+//       column.type
+//     )} ${column.isNullable ? "NULL" : "NOT NULL"}`;
+//     if (column.isIdentity) {
+//       columnDesc += ` IDENTITY(${column.identityStartValue}, ${column.identityIncrement})`;
+//     }
+//     return columnDesc;
+//   }),
+//   ...declare.$schema.indexes.map((index) => {
+//     if (index.isPrimaryKey) {
+//       return `PRIMARY KEY (${index.columns
+//         .map((col) => this.quoted(col))
+//         .join(", ")})`;
+//     }
+//     if (index.isUnique) {
+//       throw new Error(`Mssql not support unique index at table variant.`);
+//     }
+//     return "";
+//   }),
+// ].join(",\n")}
+
+// )`;
+  }
+
   get translator(): StandardTranslator {
     return defaultTranslator;
   }
@@ -449,11 +634,11 @@ export class MssqlCompiler extends Compiler {
     super(Object.assign({}, DefaultCompilerOptions, options));
   }
 
-  protected compileType(type: DbType): string {
+  compileType(type: DbType): string {
     return dbTypeToSql(type);
   }
 
-  compileDate(date: Date) {
+  protected compileDate(date: Date) {
     const str = super.compileDate(date);
     return `CONVERT(DATETIMEOFFSET(7), ${str})`;
   }

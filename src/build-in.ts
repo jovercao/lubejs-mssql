@@ -1,3 +1,4 @@
+import { dbTypeToSql } from 'types'
 import {
   Binary,
   builtIn,
@@ -15,6 +16,10 @@ import {
 type InvokeHandler0<TResult extends Scalar> = () => Expression<TResult>;
 type InvokeHandler1<TResult extends Scalar, TArg1 extends Scalar> = (
   expr: CompatibleExpression<TArg1>
+) => Expression<TResult>;
+type InvokeHandler2<TResult extends Scalar, TArg1 extends Scalar, TArg2 extends Scalar> = (
+  expr1: CompatibleExpression<TArg1>,
+  expr2: CompatibleExpression<TArg1>
 ) => Expression<TResult>;
 // type InvokeHandler2<TResult extends Scalar, TArg1 extends Scalar, TArg2 extends Scalar> = (arg1: CompatibleExpression<TArg1>, arg2: CompatibleExpression<TArg2>) => Expression<TResult>;
 // type InvokeHandler3<TResult extends Scalar, TArg1 extends Scalar, TArg2 extends Scalar, TArg3 extends Scalar> = (arg1: CompatibleExpression<TArg1>, arg2: CompatibleExpression<TArg2>, arg3: CompatibleExpression<TArg3>) => Expression<TResult>;
@@ -298,7 +303,7 @@ export const log10: InvokeHandler1<number, number> = makeFunc(
   true
 );
 export const pi: InvokeHandler0<number> = makeFunc("scalar", "pi", true);
-export const power: InvokeHandler1<number, number> = makeFunc(
+export const power: InvokeHandler2<number, number, number> = makeFunc(
   "scalar",
   "power",
   true
@@ -780,43 +785,6 @@ export type MssqlDbType =
   | BINARY
   | VARBINARY;
 
-export function dbTypeToSql(type: DbType): string {
-  switch (type.name) {
-    case "STRING":
-      return `VARCHAR(${type.length === DbType.MAX ? "MAX" : type.length})`;
-    case "INT8":
-      return "TINYINT";
-    case "INT16":
-      return "SMALLINT";
-    case "INT32":
-      return "INT";
-    case "INT64":
-      return "BIGINT";
-    case "BINARY":
-      return `VARBINARY(${type.length === 0 ? "MAX" : type.length})`;
-    case "BOOLEAN":
-      return "BIT";
-    case "DATE":
-      return "DATE";
-    case "DATETIME":
-      return "DATETIMEOFFSET(7)";
-    case "FLOAT":
-      return "REAL";
-    case "DOUBLE":
-      return "FLOAT(53)";
-    case "NUMERIC":
-      return `NUMERIC(${type.precision}, ${type.digit})`;
-    case "UUID":
-      return "UNIQUEIDENTIFIER";
-    case "OBJECT":
-    case "ARRAY":
-      return "NVARCHAR(MAX)";
-    case "ROWFLAG":
-      return "TIMESTAMP";
-    default:
-      throw new Error(`Unsupport data type ${type["name"]}`);
-  }
-}
 
 export function convert<T extends DbType>(
   type: T,
