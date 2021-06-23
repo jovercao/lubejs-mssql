@@ -49,7 +49,7 @@ import {
   atan,
   atan2,
   cot,
-} from "./build-in";
+} from './build-in';
 import {
   Compiler,
   CompileOptions,
@@ -68,9 +68,9 @@ import {
   TableVariantDeclare,
   Insert,
   AST,
-} from "../../lubejs";
+} from '../../lubejs';
 
-import { dbTypeToSql } from "./types";
+import { dbTypeToSql } from './types';
 
 export interface MssqlCompileOptions extends CompileOptions {}
 
@@ -82,36 +82,38 @@ export const DefaultCompilerOptions: MssqlCompileOptions = {
   /**
    * 标识符引用，左
    */
-  quotedLeft: "[",
+  quotedLeft: '[',
   /**
    * 标识符引用，右
    */
-  quotedRight: "]",
+  quotedRight: ']',
 
   /**
    * 参数前缀
    */
-  parameterPrefix: "@",
+  parameterPrefix: '@',
 
   /**
    * 变量前缀
    */
-  variantPrefix: "@",
+  variantPrefix: '@',
 
   /**
    * 集合别名连接字符，默认为 ''
    */
-  setsAliasJoinWith: "AS",
+  setsAliasJoinWith: 'AS',
 
   /**
    * 输出参数尾词
    */
-  parameterOutWord: "OUT",
+  parameterOutWord: 'OUT',
 
   /**
    * 字段别名连接字符器，默认为 ''
    */
-  fieldAliasJoinWith: "AS",
+  fieldAliasJoinWith: 'AS',
+
+  // blockSplitWord: '\nGO\n',
 };
 
 // const MssqlFormatStyleIdMap = {
@@ -593,37 +595,37 @@ SET IDENTITY_INSERT OFF
     declare: TableVariantDeclare<any>
   ): string {
     throw new Error(`待完成!`);
-//     if (declare.$schema.foreignKeys?.length > 0) {
-//       throw new Error(`Table variant is not support foreign key at mssql.`);
-//     }
-//     return `DECLARE @${this.stringifyIdentifier(declare.$name)} TABLE(
-// ${[
-//   ...declare.$schema.columns.map((column) => {
-//     if (column.isCalculate) {
-//       return `${this.quoted(column.name)} AS ${column.calculateExpression}`;
-//     }
-//     let columnDesc = `${this.quoted(column.name)} ${this.compileType(
-//       column.type
-//     )} ${column.isNullable ? "NULL" : "NOT NULL"}`;
-//     if (column.isIdentity) {
-//       columnDesc += ` IDENTITY(${column.identityStartValue}, ${column.identityIncrement})`;
-//     }
-//     return columnDesc;
-//   }),
-//   ...declare.$schema.indexes.map((index) => {
-//     if (index.isPrimaryKey) {
-//       return `PRIMARY KEY (${index.columns
-//         .map((col) => this.quoted(col))
-//         .join(", ")})`;
-//     }
-//     if (index.isUnique) {
-//       throw new Error(`Mssql not support unique index at table variant.`);
-//     }
-//     return "";
-//   }),
-// ].join(",\n")}
+    //     if (declare.$schema.foreignKeys?.length > 0) {
+    //       throw new Error(`Table variant is not support foreign key at mssql.`);
+    //     }
+    //     return `DECLARE @${this.stringifyIdentifier(declare.$name)} TABLE(
+    // ${[
+    //   ...declare.$schema.columns.map((column) => {
+    //     if (column.isCalculate) {
+    //       return `${this.quoted(column.name)} AS ${column.calculateExpression}`;
+    //     }
+    //     let columnDesc = `${this.quoted(column.name)} ${this.compileType(
+    //       column.type
+    //     )} ${column.isNullable ? "NULL" : "NOT NULL"}`;
+    //     if (column.isIdentity) {
+    //       columnDesc += ` IDENTITY(${column.identityStartValue}, ${column.identityIncrement})`;
+    //     }
+    //     return columnDesc;
+    //   }),
+    //   ...declare.$schema.indexes.map((index) => {
+    //     if (index.isPrimaryKey) {
+    //       return `PRIMARY KEY (${index.columns
+    //         .map((col) => this.quoted(col))
+    //         .join(", ")})`;
+    //     }
+    //     if (index.isUnique) {
+    //       throw new Error(`Mssql not support unique index at table variant.`);
+    //     }
+    //     return "";
+    //   }),
+    // ].join(",\n")}
 
-// )`;
+    // )`;
   }
 
   get translator(): StandardTranslator {
@@ -647,14 +649,14 @@ SET IDENTITY_INSERT OFF
     select: Select<any>,
     params: Set<Parameter>
   ): string {
-    let sql = "";
+    let sql = '';
     if (select.$offset === undefined && select.$limit === undefined) return sql;
     if (!select.$sorts) {
       select.orderBy(1);
-      sql += " ORDER BY 1";
+      sql += ' ORDER BY 1';
     }
     sql += ` OFFSET ${select.$offset || 0} ROWS`;
-    if (typeof select.$limit === "number") {
+    if (typeof select.$limit === 'number') {
       sql += ` FETCH NEXT ${select.$limit} ROWS ONLY`;
     }
     return sql;

@@ -130,7 +130,14 @@ describe('MSSQL TESTS', function () {
       });
     }
     // try {
+    //   await db.query('drop table Items');
+    // } finally {
+    // }
+    // try {
     //   await db.query('drop function dosomething');
+    // } finally {
+    // }
+    // try {
     //   await db.query('drop PROC doProc');
     // } finally {
     // }
@@ -159,7 +166,7 @@ describe('MSSQL TESTS', function () {
       FSex BIT,
       FCreateDate DATETIME DEFAULT (GETDATE()),
       Flag TIMESTAMP NOT NULL,
-      FParentID INT NULL,
+      FParentId INT NULL,
     )`;
   });
 
@@ -191,7 +198,7 @@ describe('MSSQL TESTS', function () {
       'rows|3001': [
         {
           // 属性 id 是一个自增数，起始值为 1，每次增 1
-          // 'FID|+1': 1,
+          // 'FId|+1': 1,
           'FAge|18-60': 1,
           'FSex|0-1': false,
           FName: '@name',
@@ -207,7 +214,7 @@ describe('MSSQL TESTS', function () {
   it('db.insert(table, rows: ValueObject)', async function () {
     const row = mock.mock({
       // 属性 id 是一个自增数，起始值为 1，每次增 1
-      // 'FID|+1': 1,
+      // 'FId|+1': 1,
       'FAge|18-60': 1,
       'FSex|0-1': false,
       FName: '@name',
@@ -221,7 +228,7 @@ describe('MSSQL TESTS', function () {
   it('db.insert(table, fields, rows: Expression[])', async function () {
     const lines = await db.insert(
       'Items',
-      ['fage', 'fsex', 'fname'],
+      ['FAge', 'FSex', 'FName'],
       [18, false, '李莉']
     );
     assert(lines === 1);
@@ -230,7 +237,7 @@ describe('MSSQL TESTS', function () {
   it('db.insert(table, fields, rows: Expression[][])', async function () {
     const lines = await db.insert(
       'Items',
-      ['fage', 'fsex', 'fname'],
+      ['FAge', 'FSex', 'FName'],
       [
         [18, false, '李莉'],
         [18, false, '王丽萍'],
@@ -292,7 +299,7 @@ describe('MSSQL TESTS', function () {
   it('db.query(sql: Insert) => @@IDENTITY', async function () {
     const row = mock.mock({
       // 属性 id 是一个自增数，起始值为 1，每次增 1
-      // 'FID|+1': 10000,
+      // 'FId|+1': 10000,
       'FAge|18-60': 1,
       'FSex|0-1': false,
       FName: '@name',
@@ -304,7 +311,7 @@ describe('MSSQL TESTS', function () {
     assert(rowsAffected === 1);
     const sql2 = select<IItem>(any)
       .from('Items')
-      .where(field('fid').eq(identityValue('Items', 'FId')));
+      .where(field('FId').eq(identityValue('Items', 'FId')));
     const res2 = await db.query(sql2);
     assert(res2.rows.length > 0);
   });
@@ -333,12 +340,12 @@ describe('MSSQL TESTS', function () {
     // const lines = await db.update<any>(
     //   "Items",
     //   {
-    //     FNAME: "冷蒙",
-    //     FAGE: 21,
-    //     FSEX: false,
+    //     FName: "冷蒙",
+    //     FAge: 21,
+    //     FSex: false,
     //   },
     //   {
-    //     FID: 1,
+    //     FId: 1,
     //   }
     // );
     assert(lines === 1);
@@ -348,19 +355,19 @@ describe('MSSQL TESTS', function () {
     const lines = await db.update<any>(
       'Items',
       {
-        FNAME: '冷蒙',
-        FAGE: 21,
-        FSEX: false,
+        FName: '冷蒙',
+        FAge: 21,
+        FSex: false,
       },
       {
-        FID: 1,
+        FId: 1,
       }
     );
     assert(lines === 1);
   });
 
   it('update statement', async function () {
-    const a = table<IItem>('items');
+    const a = table<IItem>('Items');
     const sql = update(a)
       .set({
         FName: '哈罗',
@@ -373,8 +380,8 @@ describe('MSSQL TESTS', function () {
   });
 
   it('update statement -> join update', async function () {
-    const a = table<IItem>('items').as('a');
-    const b = table<IItem>('items').as('b');
+    const a = table<IItem>('Items').as('a');
+    const b = table<IItem>('Items').as('b');
     const sql = update(a)
       .set({
         FName: '哈罗',
@@ -503,9 +510,9 @@ describe('MSSQL TESTS', function () {
         let lines = await executor.delete('Items');
         assert(lines > 0);
         const row = {
-          FNAME: '中华人民共和国',
-          FAGE: 70,
-          FSEX: false,
+          FName: '中华人民共和国',
+          FAge: 70,
+          FSex: false,
         };
         lines = await executor.insert('Items', [row]);
         assert(lines > 0);
@@ -518,7 +525,7 @@ describe('MSSQL TESTS', function () {
               .where(t.FId.eq(identityValue('Items', 'FId')))
           )
         ).rows[0];
-        assert.strictEqual(item.FName, row.FNAME);
+        assert.strictEqual(item.FName, row.FName);
         throw new Error('事务错误回滚测试');
       });
     } catch (ex) {
