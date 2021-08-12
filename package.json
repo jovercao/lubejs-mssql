@@ -1,6 +1,6 @@
 {
   "name": "lubejs-mssql",
-  "version": "2.0.3",
+  "version": "3.0.0-preview",
   "description": "The lubejs driver for mssql.",
   "main": "dist/index.js",
   "directories": {
@@ -8,7 +8,9 @@
   },
   "types": "lib/index.d.ts",
   "scripts": {
-    "test": "mocha --fulltrace --full-trace --require ts-node/register --extensions ts,tsx 'test/**/*.{ts,tsx}'"
+    "build": "npm run clean && npm run lint && tsc",
+    "clean": "pwsh -c 'rm -r -force dist'",
+    "lint": "eslint --fix ./src --ext .ts"
   },
   "keywords": [
     "mssql",
@@ -20,26 +22,19 @@
     "mssqlserver"
   ],
   "files": [
-    "dist"
+    "dist/**/*.js",
+    "dist/**/*.d.ts"
   ],
   "author": "jover",
   "license": "MIT",
   "dependencies": {
-    "@types/mssql": "^6.0.8",
-    "lodash.merge": "^4.6.2",
-    "lubejs": "^2.0.0-beta.20",
-    "mssql": "^6.3.2",
-    "tedious": "^6.7.0"
+    "@jovercao/mssql": "^7.2.1-jover.2"
   },
   "devDependencies": {
-    "@types/lodash": "^4.14.157",
-    "@types/mocha": "^7.0.2",
-    "@types/mockjs": "^1.0.2",
+    "@types/mssql": "^6.0.8",
+    "@types/node": "^14.17.9",
+    "@typescript-eslint/eslint-plugin": "^4.29.1",
     "@typescript-eslint/parser": "^4.4.1",
-    "commander": "^5.1.0",
-    "mocha": "^8.4.0",
-    "mockjs": "^1.1.0",
-    "ts-node": "^8.10.2",
     "typescript": "^3.9.9"
   },
   "publishConfig": {
