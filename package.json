@@ -1,14 +1,13 @@
 {
   "name": "lubejs-mssql",
-  "version": "3.0.0-preview01",
+  "version": "3.0.0-preview02",
   "description": "The lubejs driver for mssql.",
   "main": "dist/index.js",
   "directories": {
     "dist": "dist"
   },
-  "types": "lib/index.d.ts",
   "scripts": {
-    "build": "npm run clean && npm run lint && tsc",
+    "build": "npm run clean && npm run lint && tsc && npm pack",
     "clean": "pwsh -c 'rm -r -force dist'",
     "lint": "eslint --fix ./src --ext .ts"
   },
@@ -35,7 +34,7 @@
     "@types/node": "^14.17.9",
     "@typescript-eslint/eslint-plugin": "^4.29.1",
     "@typescript-eslint/parser": "^4.4.1",
-    "typescript": "^3.9.9"
+    "typescript": "^4.3.5"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org/"

@@ -23,10 +23,7 @@ export async function doQuery(
   if (params) {
     params.forEach(
       ({ name, value, type, direction = 'INPUT' }) => {
-        let mssqlType: mssql.ISqlType;
-        // 优先使用dbType
-
-        mssqlType = toMssqlType(type);
+        const mssqlType: mssql.ISqlType = toMssqlType(type);
 
         if (direction === 'INPUT') {
           if (type) {

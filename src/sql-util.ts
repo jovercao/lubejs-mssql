@@ -48,6 +48,7 @@ import {
   atan,
   atan2,
   cot,
+  object_id,
 } from './build-in';
 import {
   SqlUtil,
@@ -97,6 +98,8 @@ import {
   ObjectName,
   Raw,
   ColumnDeclareForAlter,
+  Condition,
+  BinaryOperation,
 } from 'lubejs';
 import { dbTypeToRaw, rawToDbType } from './types';
 import {
@@ -621,6 +624,66 @@ export class MssqlStandardTranslator implements StandardTranslator {
   unicodeChar(code: CompatibleExpression<number>): Expression<string> {
     return char(code);
   }
+
+  existsTable(name: CompatiableObjectName): Condition {
+    return SQL.exists(SQL.select(1).from({
+      schema: 'sys',
+      name: 'tables'
+    }).where(
+      SQL.field('object_id').eq(object_id(this.sqlUtil.sqlifyObjectName(name))))
+    )
+  }
+
+  existsDatabase(database: string): Condition {
+    return SQL.exists(SQL.select(1).from({
+      schema: 'sys',
+      name: 'tables'
+    }).where(
+      SQL.field('name').eq(
+        database
+      )
+    ))
+  }
+
+  existsView(name: CompatiableObjectName): Condition {
+    return SQL.exists(SQL.select(1).from({
+      schema: 'sys',
+      name: 'views'
+    }).where(
+      SQL.field('object_id').eq(object_id(this.sqlUtil.sqlifyObjectName(name))))
+    )
+  }
+
+  existsFunction(name: CompatiableObjectName): Condition {
+    const f = SQL.table('sys.objects').as('f')
+    return SQL.exists(SQL.select(1).from({
+      schema: 'sys',
+      name: 'objects'
+    }).where(
+      SQL.and(
+        f.type.eq('FN'),
+        SQL.field('object_id').eq(object_id(this.sqlUtil.sqlifyObjectName(name))))
+      )
+    )
+  }
+
+  existsProcedure(name: CompatiableObjectName): Condition {
+    return SQL.exists(SQL.select(1).from({
+      schema: 'sys',
+      name: 'procedures'
+    }).where(
+      SQL.field('object_id').eq(object_id(this.sqlUtil.sqlifyObjectName(name))))
+    )
+  }
+
+  existsSequence(name: CompatiableObjectName): Condition {
+    return SQL.exists(SQL.select(1).from({
+      schema: 'sys',
+      name: 'sequences'
+    }).where(
+      SQL.field('object_id').eq(object_id(this.sqlUtil.sqlifyObjectName(name))))
+    )
+  }
 }
 
 export class MssqlSqlUtil extends SqlUtil {
@@ -660,9 +723,7 @@ export class MssqlSqlUtil extends SqlUtil {
   }
   protected sqlifyExecute(
     exec: Execute,
-    params: Set<Parameter<Scalar, string>>,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    parent?: AST
+    params: Set<Parameter>,
   ): string {
     const returnParam = SQL.output(
       this.options.returnParameterName!,
@@ -678,6 +739,16 @@ export class MssqlSqlUtil extends SqlUtil {
     );
   }
 
+  protected sqlifyBinaryOperation(exp: BinaryOperation, params?: Set<Parameter>): string {
+    if (exp.$operator === '<<') {
+      return `${this.sqlifyExpression(exp.$left, params)} * POWER(2, ${this.sqlifyExpression(exp.$right, params)})`
+    }
+    if (exp.$operator === '>>') {
+      return `${this.sqlifyExpression(exp.$left, params)} / POWER(2, ${this.sqlifyExpression(exp.$right, params)})`
+    }
+    return super.sqlifyBinaryOperation(exp, params)
+  }
+
   sqlifyContinue(statement: Continue): string {
     return 'CONTINUE';
   }
@@ -686,7 +757,7 @@ export class MssqlSqlUtil extends SqlUtil {
   }
   sqlifyWhile(
     statement: While,
-    params?: Set<Parameter<Scalar, string>>
+    params?: Set<Parameter>
   ): string {
     assertAst(
       statement.$statement,
@@ -696,7 +767,7 @@ export class MssqlSqlUtil extends SqlUtil {
     sql += this.sqlifyStatement(statement.$statement, params);
     return sql;
   }
-  sqlifyIf(statement: If, params?: Set<Parameter<Scalar, string>>): string {
+  sqlifyIf(statement: If, params?: Set<Parameter>): string {
     assertAst(
       statement.$then,
       'In if statement, then statement not found.'
@@ -784,7 +855,7 @@ export class MssqlSqlUtil extends SqlUtil {
 
   protected sqlifyBlock(
     statement: Block,
-    params?: Set<Parameter<Scalar, string>>,
+    params?: Set<Parameter>,
     parent?: AST
   ): string {
     return `BEGIN\n  ${statement.$statements
@@ -1006,7 +1077,7 @@ export class MssqlSqlUtil extends SqlUtil {
 
   protected sqlifyInsert(
     insert: Insert,
-    params?: Set<Parameter<Scalar, string>>,
+    params?: Set<Parameter>,
     parent?: AST
   ): string {
     const sql = super.sqlifyInsert(insert, params, parent);
