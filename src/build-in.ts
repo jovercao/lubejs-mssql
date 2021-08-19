@@ -47,7 +47,7 @@ export const count: (expr: CompatibleExpression<Scalar> | Star) => Expression<nu
   "count",
   true
 );
-export const avg: InvokeHandler1<number, number> = makeInvoke(
+export const avg: <T extends Numeric>(expr: CompatibleExpression<T>) => Expression<T> = makeInvoke(
   "scalar",
   "avg",
   true
@@ -72,6 +72,7 @@ export const round: (
   expr: CompatibleExpression<Numeric>,
   precision: CompatibleExpression<Numeric>
 ) => Expression<Numeric> = makeInvoke("scalar", "round", true);
+
 export const nvl: <T1 extends Scalar, T2 extends Scalar>(
   expr: CompatibleExpression<T1>,
   default_value: CompatibleExpression<T2>
@@ -248,62 +249,62 @@ export const replace: (
   search_expression: CompatibleExpression<string>,
   replacement_expression: CompatibleExpression<string>
 ) => Expression<string> = makeInvoke("scalar", "replace", true);
-export const abs: InvokeHandler1<number, number> = makeInvoke(
+export const abs: InvokeHandler1<Numeric, Numeric> = makeInvoke(
   "scalar",
   "abs",
   true
 );
-export const acos: InvokeHandler1<number, number> = makeInvoke(
+export const acos: InvokeHandler1<Numeric, Numeric> = makeInvoke(
   "scalar",
   "acos",
   true
 );
-export const asin: InvokeHandler1<number, number> = makeInvoke(
+export const asin: InvokeHandler1<Numeric, Numeric> = makeInvoke(
   "scalar",
   "asin",
   true
 );
-export const atan: InvokeHandler1<number, number> = makeInvoke(
+export const atan: InvokeHandler1<Numeric, Numeric> = makeInvoke(
   "scalar",
   "atan",
   true
 );
-export const atan2: InvokeHandler1<number, number> = makeInvoke(
+export const atan2: InvokeHandler1<Numeric, Numeric> = makeInvoke(
   "scalar",
   "atan2",
   true
 );
-export const ceiling: InvokeHandler1<number, number> = makeInvoke(
+export const ceiling: InvokeHandler1<Numeric, Numeric> = makeInvoke(
   "scalar",
   "ceiling",
   true
 );
-export const cos: InvokeHandler1<number, number> = makeInvoke(
+export const cos: InvokeHandler1<Numeric, Numeric> = makeInvoke(
   "scalar",
   "cos",
   true
 );
-export const cot: InvokeHandler1<number, number> = makeInvoke(
+export const cot: InvokeHandler1<Numeric, Numeric> = makeInvoke(
   "scalar",
   "cot",
   true
 );
-export const degrees: InvokeHandler1<number, number> = makeInvoke(
+export const degrees: InvokeHandler1<Numeric, Numeric> = makeInvoke(
   "scalar",
   "degrees",
   true
 );
-export const floor: InvokeHandler1<number, number> = makeInvoke(
+export const floor: InvokeHandler1<Numeric, Numeric> = makeInvoke(
   "scalar",
   "floor",
   true
 );
-export const log: InvokeHandler1<number, number> = makeInvoke(
+export const log: InvokeHandler1<Numeric, Numeric> = makeInvoke(
   "scalar",
   "log",
   true
 );
-export const log10: InvokeHandler1<number, number> = makeInvoke(
+export const log10: InvokeHandler1<Numeric, Numeric> = makeInvoke(
   "scalar",
   "log10",
   true
@@ -320,27 +321,27 @@ export const radians: InvokeHandler1<number, number> = makeInvoke(
   true
 );
 export const rand: InvokeHandler0<number> = makeInvoke("scalar", "rand", true);
-export const sign: InvokeHandler1<number, number> = makeInvoke(
+export const sign: InvokeHandler1<Numeric, Numeric> = makeInvoke(
   "scalar",
   "sign",
   true
 );
-export const sin: InvokeHandler1<number, number> = makeInvoke(
+export const sin: InvokeHandler1<Numeric, Numeric> = makeInvoke(
   "scalar",
   "sin",
   true
 );
-export const sqrt: InvokeHandler1<number, number> = makeInvoke(
+export const sqrt: InvokeHandler1<Numeric, Numeric> = makeInvoke(
   "scalar",
   "sqrt",
   true
 );
-export const square: InvokeHandler1<number, number> = makeInvoke(
+export const square: InvokeHandler1<Numeric, Numeric> = makeInvoke(
   "scalar",
   "square",
   true
 );
-export const tan: InvokeHandler1<number, number> = makeInvoke(
+export const tan: InvokeHandler1<Numeric, Numeric> = makeInvoke(
   "scalar",
   "tan",
   true

@@ -100,6 +100,7 @@ import {
   ColumnDeclareForAlter,
   Condition,
   BinaryOperation,
+  Numeric,
 } from 'lubejs';
 import { dbTypeToRaw, rawToDbType } from './types';
 import {
@@ -222,9 +223,9 @@ export class MssqlStandardTranslator implements StandardTranslator {
   }
 
   round(
-    value: CompatibleExpression<number>,
-    s: CompatibleExpression<number>
-  ): Expression<number> {
+    value: CompatibleExpression<Numeric>,
+    s: CompatibleExpression<Numeric>
+  ): Expression<Numeric> {
     return round(value, s);
   }
 
@@ -279,11 +280,11 @@ export class MssqlStandardTranslator implements StandardTranslator {
     return count(expr);
   }
 
-  avg(expr: CompatibleExpression<number>): Expression<number> {
+  avg(expr: CompatibleExpression<Numeric>): Expression<Numeric> {
     return avg(expr);
   }
 
-  sum(expr: CompatibleExpression<number>): Expression<number> {
+  sum(expr: CompatibleExpression<Numeric>): Expression<Numeric> {
     return sum(expr);
   }
 
