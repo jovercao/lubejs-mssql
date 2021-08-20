@@ -36,6 +36,7 @@ export const DefaultConnectOptions: MssqlConfig = {
   connectionTimeout: 15000,
   // 开启JSON
   parseJSON: true,
+
   // // 严格模式
   // strict: true,
 };

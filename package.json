@@ -27,7 +27,8 @@
   "author": "jover",
   "license": "MIT",
   "dependencies": {
-    "@jovercao/mssql": "^7.2.1-jover.2"
+    "@jovercao/mssql": "^7.2.1-jover.2",
+    "core-decorators": "^0.20.0"
   },
   "devDependencies": {
     "@types/mssql": "^6.0.8",

@@ -1,7 +1,15 @@
-import { Scalar, isBinary, Uuid, Decimal, ConnectOptions, SqlBuilder } from 'lubejs';
+import {
+  Scalar,
+  isBinary,
+  Uuid,
+  Decimal,
+  ConnectOptions,
+  SqlBuilder,
+} from 'lubejs';
 import mssql from '@jovercao/mssql';
-import { DefaultConnectOptions } from './provider'
-import { MssqlConnectOptions } from './types'
+import { DefaultConnectOptions } from './provider';
+import { MssqlConnectOptions } from './types';
+import { deprecate as nodeDeprecate } from 'util';
 
 // export function quoted(name: string): string {
 //   return `[${name.replace(/\]/g, "]]")}]`;
@@ -120,35 +128,39 @@ export function sqlifyLiteral(value: Scalar): string {
 
 export function parseMssqlConfig(options: MssqlConnectOptions): mssql.config {
   const mssqlOptions: mssql.config = Object.assign({}, DefaultConnectOptions);
+  // 避免对象污染
+  mssqlOptions.options = Object.assign({}, DefaultConnectOptions.options);
+
   const keys = ['user', 'password', 'port', 'database'];
-  keys.forEach(key => {
+  keys.forEach((key) => {
     if (Reflect.has(options, key)) {
       Reflect.set(mssqlOptions, key, Reflect.get(options, key));
     }
   });
   mssqlOptions.server = options.host;
-  mssqlOptions.pool = mssqlOptions.pool || {};
+  // mssqlOptions.pool = mssqlOptions.pool || {};
   mssqlOptions.options = mssqlOptions.options || {};
 
   if (options.instance) {
     mssqlOptions.options.instanceName = options.instance;
   }
 
-  if (options.maxConnections !== undefined) {
-    mssqlOptions.pool.max = options.maxConnections;
-  }
-  if (options.minConnections) {
-    mssqlOptions.pool.min = options.minConnections;
-  }
+  // if (options.maxConnections !== undefined) {
+  //   mssqlOptions.pool.max = options.maxConnections;
+  // }
+  // if (options.minConnections) {
+  //   mssqlOptions.pool.min = options.minConnections;
+  // }
+  // if (options.recoveryConnection) {
+  //   mssqlOptions.pool.idleTimeoutMillis = options.recoveryConnection;
+  // }
   if (options.connectionTimeout) {
     mssqlOptions.options.connectTimeout = options.connectionTimeout;
   }
   if (options.requestTimeout) {
     mssqlOptions.options.requestTimeout = options.requestTimeout;
   }
-  if (options.recoveryConnection) {
-    mssqlOptions.pool.idleTimeoutMillis = options.recoveryConnection;
-  }
+
   if (options.encrypt) {
     mssqlOptions.options.encrypt = options.encrypt;
   }
@@ -158,3 +170,40 @@ export function parseMssqlConfig(options: MssqlConnectOptions): mssql.config {
   }
   return mssqlOptions;
 }
+
+// export function deprecate(msg: string): MethodDecorator | PropertyDecorator | ClassDecorator {
+//   msg = 'lubejs-mssql————' + msg;
+//   return function (
+//     target: Object | Function,
+//     key?: string | number | symbol,
+//     propertyDescriptor?: PropertyDescriptor
+//   ): TypedPropertyDescriptor<any> | void | Function {
+//     // class
+//     if (typeof target === 'function' && key === undefined) {
+//       return class DeprecateClass extends (target as any) {
+//         constructor(...args: any) {
+//           super(...args);
+//           console.warn(msg);
+//         }
+//       }
+//     }
+
+//     // method
+//     if (typeof propertyDescriptor?.value === 'function') {
+//       return {
+//         ...propertyDescriptor,
+//         value: nodeDeprecate(propertyDescriptor!.value!, msg);
+//       }
+//     } else {
+//       if (propertyDescriptor) {
+//         return {
+//           configurable: propertyDescriptor.configurable,
+//           enumerable: propertyDescriptor.enumerable,
+//           writable?: propertyDescriptor.writable,
+//           get: nodeDeprecate(propertyDescriptor?.get || function() { return this['___' + key] }, msg),
+//           set: nodeDeprecate(propertyDescriptor?.set || function(value) { this['__' + key] = value}),
+//         }
+//       }
+//     }
+//   };
+// }
