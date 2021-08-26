@@ -1,17 +1,22 @@
-import { dbTypeToSql } from 'types';
+import { dbTypeToRaw } from './types';
 import {
+  Statement,
   Binary,
-  builtIn,
   BuiltIn,
   CompatibleExpression,
   DbType,
   Expression,
-  func,
-  makeFunc,
   Scalar,
   TsTypeOf,
-  variant,
-} from '../../lubejs';
+  SqlBuilder as SQL,
+  Star,
+  Numeric,
+  SQL_SYMBOLE,
+  Raw,
+} from 'lubejs';
+import { deprecate } from 'util';
+
+const { makeExec, variant, builtIn, func, makeInvoke } = SQL;
 
 type InvokeHandler0<TResult extends Scalar> = () => Expression<TResult>;
 type InvokeHandler1<TResult extends Scalar, TArg1 extends Scalar> = (
@@ -23,7 +28,7 @@ type InvokeHandler2<
   TArg2 extends Scalar
 > = (
   expr1: CompatibleExpression<TArg1>,
-  expr2: CompatibleExpression<TArg1>
+  expr2: CompatibleExpression<TArg2>
 ) => Expression<TResult>;
 // type InvokeHandler2<TResult extends Scalar, TArg1 extends Scalar, TArg2 extends Scalar> = (arg1: CompatibleExpression<TArg1>, arg2: CompatibleExpression<TArg2>) => Expression<TResult>;
 // type InvokeHandler3<TResult extends Scalar, TArg1 extends Scalar, TArg2 extends Scalar, TArg3 extends Scalar> = (arg1: CompatibleExpression<TArg1>, arg2: CompatibleExpression<TArg2>, arg3: CompatibleExpression<TArg3>) => Expression<TResult>;
@@ -40,41 +45,36 @@ type InvokeHandler2<
 
 export type DatePart = BuiltIn<keyof typeof DATE_PART>;
 
-export const count: InvokeHandler1<number, any> = makeFunc(
-  'scalar',
-  'count',
-  true
-);
-export const avg: InvokeHandler1<number, number> = makeFunc(
-  'scalar',
-  'avg',
-  true
-);
-export const sum: InvokeHandler1<number, number> = makeFunc(
-  'scalar',
-  'sum',
-  true
-);
+export const count: (
+  expr: CompatibleExpression<Scalar> | Star
+) => Expression<number> = makeInvoke('scalar', 'count', true);
+export const avg: <T extends Numeric>(
+  expr: CompatibleExpression<T>
+) => Expression<T> = makeInvoke('scalar', 'avg', true);
+export const sum: <T extends Numeric>(
+  expr: CompatibleExpression<T>
+) => Expression<T> = makeInvoke('scalar', 'sum', true);
 export const max: <T extends Exclude<Scalar, Binary>>(
   expr: Expression<T>
-) => Expression<T> = makeFunc('scalar', 'max', true);
+) => Expression<T> = makeInvoke('scalar', 'max', true);
 export const min: <T extends Exclude<Scalar, Binary>>(
   expr: Expression<T>
-) => Expression<T> = makeFunc('scalar', 'min', true);
-export const exp: InvokeHandler1<number, number> = makeFunc(
+) => Expression<T> = makeInvoke('scalar', 'min', true);
+export const exp: InvokeHandler1<number, number> = makeInvoke(
   'scalar',
   'exp',
   true
 );
 export const round: (
-  expr: CompatibleExpression<number>,
-  precision: CompatibleExpression<number>
-) => Expression<number> = makeFunc('scalar', 'round', true);
+  expr: CompatibleExpression<Numeric>,
+  precision: CompatibleExpression<Numeric>
+) => Expression<Numeric> = makeInvoke('scalar', 'round', true);
+
 export const nvl: <T1 extends Scalar, T2 extends Scalar>(
   expr: CompatibleExpression<T1>,
   default_value: CompatibleExpression<T2>
-) => Expression<T1 | T2> = makeFunc('scalar', 'nvl', true);
-export const stdev: InvokeHandler1<number, number> = makeFunc(
+) => Expression<T1 | T2> = makeInvoke('scalar', 'nvl', true);
+export const stdev: InvokeHandler1<number, number> = makeInvoke(
   'scalar',
   'stdev',
   true
@@ -82,42 +82,42 @@ export const stdev: InvokeHandler1<number, number> = makeFunc(
 export const dateName: (
   part: DatePart,
   date: CompatibleExpression<Date>
-) => Expression<string> = makeFunc('scalar', 'dateName', true);
+) => Expression<string> = makeInvoke('scalar', 'dateName', true);
 export const datePart: (
   part: DatePart,
   date: CompatibleExpression<Date>
-) => Expression<number> = makeFunc('scalar', 'datePart', true);
+) => Expression<number> = makeInvoke('scalar', 'datePart', true);
 export const isNull: <T1 extends Scalar, T2 extends Scalar>(
   expr: CompatibleExpression<T1>,
   default_value: CompatibleExpression<T2>
-) => Expression<T1 | T2> = makeFunc('scalar', 'isNull', true);
-export const len: InvokeHandler1<number, string> = makeFunc(
+) => Expression<T1 | T2> = makeInvoke('scalar', 'isNull', true);
+export const len: InvokeHandler1<number, string> = makeInvoke(
   'scalar',
   'len',
   true
 );
-export const getDate: InvokeHandler0<Date> = makeFunc(
+export const getDate: InvokeHandler0<Date> = makeInvoke(
   'scalar',
   'getDate',
   true
 );
-export const getUtcDate: InvokeHandler0<Date> = makeFunc(
+export const getUtcDate: InvokeHandler0<Date> = makeInvoke(
   'scalar',
   'getUtcDate',
   true
 );
 // export const export const date: NoneParameterInvoke<Date> = makeFunc('scalar', 'date', true);
-export const month: InvokeHandler1<number, Date> = makeFunc(
+export const month: InvokeHandler1<number, Date> = makeInvoke(
   'scalar',
   'month',
   true
 );
-export const year: InvokeHandler1<number, Date> = makeFunc(
+export const year: InvokeHandler1<number, Date> = makeInvoke(
   'scalar',
   'year',
   true
 );
-export const day: InvokeHandler1<number, Date> = makeFunc(
+export const day: InvokeHandler1<number, Date> = makeInvoke(
   'scalar',
   'day',
   true
@@ -126,23 +126,23 @@ export const dateAdd: (
   part: DatePart,
   increment: CompatibleExpression<number>,
   date: CompatibleExpression<Date>
-) => Expression<Date> = makeFunc('scalar', 'dateAdd', true);
+) => Expression<Date> = makeInvoke('scalar', 'dateAdd', true);
 export const dateDiff: (
   part: DatePart,
   startDate: CompatibleExpression<Date>,
   endDate: CompatibleExpression<Date>
-) => Expression<number> = makeFunc('scalar', 'dateDiff', true);
-export const sysDateTime: InvokeHandler0<Date> = makeFunc(
+) => Expression<number> = makeInvoke('scalar', 'dateDiff', true);
+export const sysDateTime: InvokeHandler0<Date> = makeInvoke(
   'scalar',
   'sysDateTime',
   true
 );
-export const sysUtcDateTime: InvokeHandler0<Date> = makeFunc(
+export const sysUtcDateTime: InvokeHandler0<Date> = makeInvoke(
   'scalar',
   'sysUtcDateTime',
   true
 );
-export const sysDateTimeOffset: InvokeHandler0<Date> = makeFunc(
+export const sysDateTimeOffset: InvokeHandler0<Date> = makeInvoke(
   'scalar',
   'sysDateTimeOffset',
   true
@@ -151,22 +151,22 @@ export const sysDateTimeOffset: InvokeHandler0<Date> = makeFunc(
 export const switchOffset: (
   date: CompatibleExpression<Date>,
   time_zone: CompatibleExpression<string>
-) => Expression<Date> = makeFunc('scalar', 'switchOffset', true);
+) => Expression<Date> = makeInvoke('scalar', 'switchOffset', true);
 
 export const charIndex: (
   pattern: CompatibleExpression<string>,
   str: CompatibleExpression<string>,
   startIndex?: CompatibleExpression<number>
-) => Expression<number> = makeFunc('scalar', 'charIndex', true);
+) => Expression<number> = makeInvoke('scalar', 'charIndex', true);
 export const left: (
   str: CompatibleExpression<string>,
   length: CompatibleExpression<number>
-) => Expression<number> = makeFunc('scalar', 'left', true);
+) => Expression<number> = makeInvoke('scalar', 'left', true);
 export const right: (
   str: CompatibleExpression<string>,
   length: CompatibleExpression<number>
-) => Expression<number> = makeFunc('scalar', 'right', true);
-export const str: InvokeHandler1<string, Scalar> = makeFunc(
+) => Expression<number> = makeInvoke('scalar', 'right', true);
+export const str: InvokeHandler1<string, Scalar> = makeInvoke(
   'scalar',
   'str',
   true
@@ -175,23 +175,23 @@ export const substring: (
   expr: CompatibleExpression<string>,
   start: CompatibleExpression<number>,
   length: CompatibleExpression<number>
-) => Expression<string> = makeFunc('scalar', 'substring', true);
-export const ascii: InvokeHandler1<number, string> = makeFunc(
+) => Expression<string> = makeInvoke('scalar', 'substring', true);
+export const ascii: InvokeHandler1<number, string> = makeInvoke(
   'scalar',
   'ascii',
   true
 );
-export const unicode: InvokeHandler1<number, string> = makeFunc(
+export const unicode: InvokeHandler1<number, string> = makeInvoke(
   'scalar',
   'unicode',
   true
 );
-export const char: InvokeHandler1<string, number> = makeFunc(
+export const char: InvokeHandler1<string, number> = makeInvoke(
   'scalar',
   'char',
   true
 );
-export const nchar: InvokeHandler1<string, number> = makeFunc(
+export const nchar: InvokeHandler1<string, number> = makeInvoke(
   'scalar',
   'nchar',
   true
@@ -199,23 +199,23 @@ export const nchar: InvokeHandler1<string, number> = makeFunc(
 export const patIndex: (
   pattern: CompatibleExpression<string>,
   str: CompatibleExpression<string>
-) => Expression<number> = makeFunc('scalar', 'patIndex', true);
-export const ltrim: InvokeHandler1<string, string> = makeFunc(
+) => Expression<number> = makeInvoke('scalar', 'patIndex', true);
+export const ltrim: InvokeHandler1<string, string> = makeInvoke(
   'scalar',
   'ltrim',
   true
 );
-export const rtrim: InvokeHandler1<string, string> = makeFunc(
+export const rtrim: InvokeHandler1<string, string> = makeInvoke(
   'scalar',
   'rtrim',
   true
 );
-export const space: InvokeHandler1<string, number> = makeFunc(
+export const space: InvokeHandler1<string, number> = makeInvoke(
   'scalar',
   'space',
   true
 );
-export const reverse: InvokeHandler1<string, string> = makeFunc(
+export const reverse: InvokeHandler1<string, string> = makeInvoke(
   'scalar',
   'reverse',
   true
@@ -225,18 +225,18 @@ export const stuff: (
   starting_position: CompatibleExpression<number>,
   number_of_chars: CompatibleExpression<number>,
   replacement_expression: CompatibleExpression<string>
-) => Expression<string> = makeFunc('scalar', 'stuff', true);
-export const quotedName: InvokeHandler1<string, string> = makeFunc(
+) => Expression<string> = makeInvoke('scalar', 'stuff', true);
+export const quotedName: InvokeHandler1<string, string> = makeInvoke(
   'scalar',
   'quotedName',
   true
 );
-export const lower: InvokeHandler1<string, string> = makeFunc(
+export const lower: InvokeHandler1<string, string> = makeInvoke(
   'scalar',
   'lower',
   true
 );
-export const upper: InvokeHandler1<string, string> = makeFunc(
+export const upper: InvokeHandler1<string, string> = makeInvoke(
   'scalar',
   'upper',
   true
@@ -245,100 +245,100 @@ export const replace: (
   expression_to_be_searched: CompatibleExpression<string>,
   search_expression: CompatibleExpression<string>,
   replacement_expression: CompatibleExpression<string>
-) => Expression<string> = makeFunc('scalar', 'replace', true);
-export const abs: InvokeHandler1<number, number> = makeFunc(
+) => Expression<string> = makeInvoke('scalar', 'replace', true);
+export const abs: InvokeHandler1<Numeric, Numeric> = makeInvoke(
   'scalar',
   'abs',
   true
 );
-export const acos: InvokeHandler1<number, number> = makeFunc(
+export const acos: InvokeHandler1<Numeric, Numeric> = makeInvoke(
   'scalar',
   'acos',
   true
 );
-export const asin: InvokeHandler1<number, number> = makeFunc(
+export const asin: InvokeHandler1<Numeric, Numeric> = makeInvoke(
   'scalar',
   'asin',
   true
 );
-export const atan: InvokeHandler1<number, number> = makeFunc(
+export const atan: InvokeHandler1<Numeric, Numeric> = makeInvoke(
   'scalar',
   'atan',
   true
 );
-export const atan2: InvokeHandler1<number, number> = makeFunc(
+export const atan2: InvokeHandler1<Numeric, Numeric> = makeInvoke(
   'scalar',
   'atan2',
   true
 );
-export const ceiling: InvokeHandler1<number, number> = makeFunc(
+export const ceiling: InvokeHandler1<Numeric, Numeric> = makeInvoke(
   'scalar',
   'ceiling',
   true
 );
-export const cos: InvokeHandler1<number, number> = makeFunc(
+export const cos: InvokeHandler1<Numeric, Numeric> = makeInvoke(
   'scalar',
   'cos',
   true
 );
-export const cot: InvokeHandler1<number, number> = makeFunc(
+export const cot: InvokeHandler1<Numeric, Numeric> = makeInvoke(
   'scalar',
   'cot',
   true
 );
-export const degrees: InvokeHandler1<number, number> = makeFunc(
+export const degrees: InvokeHandler1<Numeric, Numeric> = makeInvoke(
   'scalar',
   'degrees',
   true
 );
-export const floor: InvokeHandler1<number, number> = makeFunc(
+export const floor: InvokeHandler1<Numeric, Numeric> = makeInvoke(
   'scalar',
   'floor',
   true
 );
-export const log: InvokeHandler1<number, number> = makeFunc(
+export const log: InvokeHandler1<Numeric, Numeric> = makeInvoke(
   'scalar',
   'log',
   true
 );
-export const log10: InvokeHandler1<number, number> = makeFunc(
+export const log10: InvokeHandler1<Numeric, Numeric> = makeInvoke(
   'scalar',
   'log10',
   true
 );
-export const pi: InvokeHandler0<number> = makeFunc('scalar', 'pi', true);
-export const power: InvokeHandler2<number, number, number> = makeFunc(
+export const pi: InvokeHandler0<number> = makeInvoke('scalar', 'pi', true);
+export const power: InvokeHandler2<number, number, number> = makeInvoke(
   'scalar',
   'power',
   true
 );
-export const radians: InvokeHandler1<number, number> = makeFunc(
+export const radians: InvokeHandler1<number, number> = makeInvoke(
   'scalar',
   'radians',
   true
 );
-export const rand: InvokeHandler0<number> = makeFunc('scalar', 'rand', true);
-export const sign: InvokeHandler1<number, number> = makeFunc(
+export const rand: InvokeHandler0<number> = makeInvoke('scalar', 'rand', true);
+export const sign: InvokeHandler1<Numeric, Numeric> = makeInvoke(
   'scalar',
   'sign',
   true
 );
-export const sin: InvokeHandler1<number, number> = makeFunc(
+export const sin: InvokeHandler1<Numeric, Numeric> = makeInvoke(
   'scalar',
   'sin',
   true
 );
-export const sqrt: InvokeHandler1<number, number> = makeFunc(
+export const sqrt: InvokeHandler1<Numeric, Numeric> = makeInvoke(
   'scalar',
   'sqrt',
   true
 );
-export const square: InvokeHandler1<number, number> = makeFunc(
+export const square: InvokeHandler1<Numeric, Numeric> = makeInvoke(
   'scalar',
   'square',
   true
 );
-export const tan: InvokeHandler1<number, number> = makeFunc(
+export const tan: InvokeHandler1<Numeric, Numeric> = makeInvoke(
   'scalar',
   'tan',
   true
@@ -410,6 +410,8 @@ export const FUNCTION = {
   sin,
   tan,
 };
+
+import { deprecated } from 'core-decorators';
 
 export const YEAR = builtIn('YEAR');
 export const YY = builtIn('YY');
@@ -513,13 +515,15 @@ export const LANGUAGE = variant<string, '@LANGUAGE'>('@LANGUAGE');
 /**
  * 返回 Microsoft SQL Server上允许的同时用户连接的最大数。返回的数不必为当前配置的数值。
  */
-export const MAX_CONNECTIONS =
-  variant<number, '@MAX_CONNECTIONS'>('@MAX_CONNECTIONS');
+export const MAX_CONNECTIONS = variant<number, '@MAX_CONNECTIONS'>(
+  '@MAX_CONNECTIONS'
+);
 /**
  * 返回 Microsoft SQL Server自上次启动后从网络上读取的输入数据包数目。
  */
-export const PACK_RECEIVED =
-  variant<number, '@PACK_RECEIVED'>('@PACK_RECEIVED');
+export const PACK_RECEIVED = variant<number, '@PACK_RECEIVED'>(
+  '@PACK_RECEIVED'
+);
 /**
  * 返回 Microsoft SQL Server自上次启动后写到网络上的输出数据包数目。
  */
@@ -527,8 +531,9 @@ export const PACK_SENT = variant<number, '@PACK_SENT'>('@PACK_SENT');
 /**
  * 返回自 SQL Server 上次启动后，在 Microsoft SQL Server连接上发生的网络数据包错误数。
  */
-export const PACKET_ERRORS =
-  variant<number, '@PACKET_ERRORS'>('@PACKET_ERRORS');
+export const PACKET_ERRORS = variant<number, '@PACKET_ERRORS'>(
+  '@PACKET_ERRORS'
+);
 /**
  * 返回运行 Microsoft SQL Server的本地服务器名称。
  */
@@ -648,7 +653,87 @@ export const VARIANTS = {
   TOTAL_READ,
 };
 
-// TODO: 声明数据库类型
+// const text = Object.assign(function(length: number | 'MAX' | 'max'): DbType {
+//   return DbType.raw(`text(${length})`)
+// }, {
+
+// })
+
+// const x: Raw = text;
+
+function defaultType<T extends [...any]>(
+  type: DbType,
+  builder: (...args: T) => DbType
+): ((...args: T) => DbType) & DbType {
+  const result = Object.assign(builder, type);
+  Object.setPrototypeOf(result, Object.getPrototypeOf(type));
+  return result;
+}
+
+export const MssqlDbType = {
+  bit: DbType.raw('bit'),
+  decimal(p: number, s?: number): DbType {
+    return DbType.raw(`decimal(${p}` + (s !== undefined ? `, ${s}` : '') + ')');
+  },
+  numeric(p: number, s?: number): DbType {
+    return DbType.raw(`numeric(${p}` + (s !== undefined ? `, ${s}` : '') + ')');
+  },
+  money: DbType.raw('money'),
+  smallmoney: DbType.raw('smallmoney'),
+  tinyint: DbType.raw('tinyint'),
+  smallint: DbType.raw('smallint'),
+  int: DbType.raw('int'),
+  bigint: DbType.raw('bigint'),
+  float: defaultType(DbType.raw('float'), (n: number) =>
+    DbType.raw(`float(${n})`)
+  ),
+  real: DbType.raw('real'),
+  date: DbType.raw('date'),
+  time: defaultType(DbType.raw('time'), (s: number) =>
+    DbType.raw(`time(${s})`)
+  ),
+  datetime: DbType.raw('datetime'),
+  smalldatetime: DbType.raw('smalldatetime'),
+  datetime2: defaultType(DbType.raw('datetime2'), (p: number) =>
+    DbType.raw(`datetime2(${p})`)
+  ),
+  datetimeoffset: defaultType(DbType.raw('datetimeoffset'), (p?: number) =>
+    DbType.raw(`datetimeoffset(${p})`)
+  ),
+  char: defaultType(DbType.raw('char'), (l: number) =>
+    DbType.raw(`char(${l})`)
+  ),
+  nchar: defaultType(DbType.raw('nchar'), (l: number) =>
+    DbType.raw(`nchar(${l})`)
+  ),
+  varchar: defaultType(DbType.raw('varchar'), (l: number) =>
+    DbType.raw(`varchar(${l})`)
+  ),
+  nvarchar: defaultType(DbType.raw('nvarchar'), (l: number) =>
+    DbType.raw(`nvarchar(${l})`)
+  ),
+  /**
+   * @deprecated 该类型在未来版本将被删除
+   */
+  text: DbType.raw(`text`),
+  /**
+   * @deprecated 该类型在未来版本将被删除
+   */
+  ntext: DbType.raw(`text`),
+  /**
+   * @deprecated 该类型在未来版本将被删除
+   */
+  image: DbType.raw(`image`),
+  binary: defaultType(DbType.raw('binary'), (l: number) =>
+    DbType.raw(`binary(${l})`)
+  ),
+  varbinary: defaultType(
+    DbType.raw('varbinary'),
+    (l?: number | 'max' | 'MAX') => DbType.raw(`varbinary(${l})`)
+  ),
+};
+
+type t = typeof MssqlDbType['binary'];
 
 export type SQL_VARIANT = {
   name: 'sql_variant' | 'sv';
@@ -794,7 +879,7 @@ export function convert<T extends DbType>(
   expr: CompatibleExpression,
   styleId?: CompatibleExpression<number>
 ): Expression<TsTypeOf<T>> {
-  let typeDesc = builtIn(dbTypeToSql(type));
+  const typeDesc = builtIn(dbTypeToRaw(type));
   if (styleId === undefined) {
     return func('CONVERT', true).invokeAsScalar(typeDesc, expr);
   } else {
@@ -805,4 +890,100 @@ export function convert<T extends DbType>(
 export const format: (
   date: CompatibleExpression<Date>,
   format: CompatibleExpression<string>
-) => Expression<string> = makeFunc('scalar', 'FORMAT', true);
+) => Expression<string> = makeInvoke('scalar', 'FORMAT', true);
+
+/**
+ * 获取当前数据库名称
+ */
+export const db_name: () => Expression<string> = makeInvoke(
+  'scalar',
+  'db_name',
+  true
+);
+
+/**
+ * 获取当前架构名称
+ */
+export const schema_name: () => Expression<string> = makeInvoke(
+  'scalar',
+  'schema_name',
+  true
+);
+
+/**
+ * 获取对象ID
+ */
+export const object_id: (
+  name: CompatibleExpression<string>
+) => Expression<number> = makeInvoke('scalar', 'object_id', true);
+
+/**
+ * 通过对象ID获取对象名称
+ */
+export const object_name: (
+  objectId: CompatibleExpression<number>
+) => Expression<string> = makeInvoke('scalar', 'object_id', true);
+
+/**
+ * 获取对象定义代码
+ */
+export const object_definition: (
+  objectId: CompatibleExpression<number>
+) => Expression<string> = makeInvoke('scalar', 'object_definition', true);
+
+/**
+ * 获取数据库的上级ID
+ */
+export const database_principal_id: (
+  dbName: CompatibleExpression<string>
+) => Expression<string> = makeInvoke('scalar', 'database_principal_id', true);
+
+/**
+ * 系统重命名函数
+ */
+export const sp_rename: (
+  name: string,
+  newName: string,
+  kind?: 'USERDATATYPE' | 'OBJECT' | 'COLUMN' | 'INDEX' | 'DATABASE'
+) => Statement = makeExec('sp_rename', true);
+
+export const sp_addextendedproperty: (
+  name: string,
+  value: string,
+  level0Type: 'SCHEMA' | 'DATABASE',
+  level0: string,
+  level1Type?: 'TABLE' | 'PROCEDURE' | 'FUNCTION',
+  level1?: string,
+  level2Type?: 'CONSTRAINT' | 'COLUMN',
+  level2?: string
+) => Statement = makeExec(
+  { name: 'sp_addextendedproperty', schema: 'sys' },
+  false
+);
+
+export const sp_dropextendedproperty: (
+  name: string,
+  level0Type: 'SCHEMA' | 'DATABASE',
+  level0: string,
+  level1Type?: 'TABLE' | 'PROCEDURE' | 'FUNCTION',
+  level1?: string,
+  level2Type?: 'CONSTRAINT' | 'COLUMN',
+  level2?: string
+) => Statement = makeExec(
+  { name: 'sp_addextendedproperty', schema: 'sys' },
+  true
+);
+
+export const sp_updateextendedproperty: (
+  name: string,
+  value: string,
+  level0Type: 'SCHEMA' | 'DATABASE',
+  level0: string,
+  level1Type?: 'TABLE' | 'PROCEDURE' | 'FUNCTION',
+  level1?: string,
+  level2Type?: 'CONSTRAINT' | 'COLUMN',
+  level2?: string
+) => Statement = makeExec(
+  { name: 'sp_updateextendedproperty', schema: 'sys' },
+  true
+);
