@@ -1,6 +1,5 @@
 import { Driver, DbProvider, register } from 'lubejs';
 import { MssqlConnectOptions } from './types';
-import './mssql';
 import { DIALECT, MssqlProvider } from './provider';
 
 /**

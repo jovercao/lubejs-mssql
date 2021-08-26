@@ -11,10 +11,7 @@ import {
   SqlBuilder as SQL,
   Star,
   Numeric,
-  SQL_SYMBOLE,
-  Raw,
 } from 'lubejs';
-import { deprecate } from 'util';
 
 const { makeExec, variant, builtIn, func, makeInvoke } = SQL;
 
@@ -411,7 +408,6 @@ export const FUNCTION = {
   tan,
 };
 
-import { deprecated } from 'core-decorators';
 
 export const YEAR = builtIn('YEAR');
 export const YY = builtIn('YY');
