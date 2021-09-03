@@ -1,27 +1,4 @@
-import {
-  Scalar,
-  isBinary,
-  Uuid,
-  Decimal,
-  ConnectOptions,
-  SqlBuilder,
-} from 'lubejs';
-import mssql from '@jovercao/mssql';
-import { DefaultConnectOptions } from './provider';
-import { MssqlConnectOptions } from './types';
-import { deprecate as nodeDeprecate } from 'util';
-
-// export function quoted(name: string): string {
-//   return `[${name.replace(/\]/g, "]]")}]`;
-// }
-
-// export function namify(name: Name): string {
-//   if (typeof name === "string") return quoted(name);
-//   return name
-//     .reverse()
-//     .map((node) => quoted(node))
-//     .join(".");
-// }
+import { Scalar, isBinary, Uuid, Decimal } from 'lubejs/core';
 
 /**
  * 分组
@@ -124,51 +101,6 @@ export function sqlifyLiteral(value: Scalar): string {
     return '0x' + Buffer.from(value).toString('hex');
   }
   throw new Error(`unsupport constant value type: ${type}, value: ${value}`);
-}
-
-export function parseMssqlConfig(options: MssqlConnectOptions): mssql.config {
-  const mssqlOptions: mssql.config = Object.assign({}, DefaultConnectOptions);
-  // 避免对象污染
-  mssqlOptions.options = Object.assign({}, DefaultConnectOptions.options);
-
-  const keys = ['user', 'password', 'port', 'database'];
-  keys.forEach((key) => {
-    if (Reflect.has(options, key)) {
-      Reflect.set(mssqlOptions, key, Reflect.get(options, key));
-    }
-  });
-  mssqlOptions.server = options.host;
-  // mssqlOptions.pool = mssqlOptions.pool || {};
-  mssqlOptions.options = mssqlOptions.options || {};
-
-  if (options.instance) {
-    mssqlOptions.options.instanceName = options.instance;
-  }
-
-  // if (options.maxConnections !== undefined) {
-  //   mssqlOptions.pool.max = options.maxConnections;
-  // }
-  // if (options.minConnections) {
-  //   mssqlOptions.pool.min = options.minConnections;
-  // }
-  // if (options.recoveryConnection) {
-  //   mssqlOptions.pool.idleTimeoutMillis = options.recoveryConnection;
-  // }
-  if (options.connectionTimeout) {
-    mssqlOptions.options.connectTimeout = options.connectionTimeout;
-  }
-  if (options.requestTimeout) {
-    mssqlOptions.options.requestTimeout = options.requestTimeout;
-  }
-
-  if (options.encrypt) {
-    mssqlOptions.options.encrypt = options.encrypt;
-  }
-
-  if (options.useUTC !== undefined) {
-    mssqlOptions.options.useUTC = options.useUTC;
-  }
-  return mssqlOptions;
 }
 
 // export function deprecate(msg: string): MethodDecorator | PropertyDecorator | ClassDecorator {

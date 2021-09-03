@@ -1,8 +1,4 @@
 import {
-  SqlBuilder,
-  DbType,
-  LUBE_MIGRATE_TABLE_NAME,
-  DbProvider,
   CheckConstraintSchema,
   ColumnSchema,
   DatabaseSchema,
@@ -16,30 +12,30 @@ import {
   FunctionSchema,
   SequenceSchema,
   SchemaSchema,
-  ISOLATION_LEVEL,
-  Executor
-} from 'lubejs';
-import { database_principal_id, isNull, schema_name } from './build-in';
-import { fullType } from './types';
+} from 'lubejs/orm/index';
+
+import { LUBE_MIGRATE_TABLE_NAME } from 'lubejs/migrate';
+
+import { SQL, DbType } from 'lubejs/core';
+
+import { database_principal_id } from '../core/build-in';
+import { fullType } from './util';
+import { MssqlConnection } from 'src/core/connection';
 
 const {
   case: $case,
-  concat,
-  execute,
-  convert,
   select,
   table,
-  unionAll,
   and,
-} = SqlBuilder;
+  std: { convert },
+} = SQL;
 
 const excludeTables: string[] = [LUBE_MIGRATE_TABLE_NAME];
 
 export async function loadDatabaseSchema(
-  provider: DbProvider,
+  connection: MssqlConnection,
   dbName?: string
 ): Promise<DatabaseSchema | undefined> {
-
   /**
    * 获取 表格及视图
    */
@@ -65,7 +61,7 @@ export async function loadDatabaseSchema(
       )
       .where(t.name.notIn(...excludeTables));
 
-    const tables: TableSchema[] = (await runner.query(sql)).rows as any;
+    const tables: TableSchema[] = (await connection.query(sql)).rows as any;
 
     for (const table of tables) {
       const tableId = Reflect.get(table, 'id');
@@ -99,7 +95,7 @@ export async function loadDatabaseSchema(
           .and(p.name.eq('MS_Description'))
       )
       .where(s.principal_id.eq(database_principal_id(dbName!)));
-    const result = (await runner.query(sql)).rows;
+    const result = (await connection.query(sql)).rows;
     const schemas: SchemaSchema[] = result;
     return schemas;
   }
@@ -126,7 +122,7 @@ export async function loadDatabaseSchema(
           .and(p.name.eq('MS_Description'))
       )
       .where(v.name.notIn(...excludeTables));
-    const result = (await runner.query(sql)).rows;
+    const result = (await connection.query(sql)).rows;
     const views: ViewSchema[] = result;
 
     for (const view of views) {
@@ -157,7 +153,7 @@ export async function loadDatabaseSchema(
           .and(p.name.eq('MS_Description'))
       )
       .where(proc.name.notIn(...excludeTables));
-    const result = (await runner.query(sql)).rows;
+    const result = (await connection.query(sql)).rows;
     const procedures: ProcedureSchema[] = result;
 
     for (const procedure of procedures) {
@@ -168,12 +164,10 @@ export async function loadDatabaseSchema(
 
   async function getCode(objname: string): Promise<string> {
     const rows = (
-      await runner.execute<number, [{ Text: string }]>('sp_helptext', [
-        objname,
-      ])
+      await connection.execute<number, [{ Text: string }]>('sp_helptext', [objname])
     ).rows;
     const key = Object.keys(rows[0])[0];
-    const code = rows.map(row => Reflect.get(row, key)).join('\n');
+    const code = rows.map((row) => Reflect.get(row, key)).join('\n');
     return code;
   }
 
@@ -199,7 +193,7 @@ export async function loadDatabaseSchema(
           .and(p.name.eq('MS_Description'))
       )
       .where(fn.type.eq('FN'));
-    const result = (await runner.query(sql)).rows;
+    const result = (await connection.query(sql)).rows;
     const functions: FunctionSchema[] = result;
 
     for (const funciton of functions) {
@@ -237,13 +231,13 @@ export async function loadDatabaseSchema(
           .and(p.name.eq('MS_Description'))
       )
       .where(seq.type.eq('FN'));
-    const result = (await runner.query(sql)).rows;
-    const functions: SequenceSchema[] = result.map(row => {
+    const result = (await connection.query(sql)).rows;
+    const functions: SequenceSchema[] = result.map((row) => {
       const { type_name, type_precision, type_scale, ...datas } = row;
       return {
         ...datas,
-        type: fullType(type_name, 0, type_precision, type_scale)
-      }
+        type: fullType(type_name, 0, type_precision, type_scale),
+      };
     });
     return functions;
   }
@@ -296,7 +290,7 @@ export async function loadDatabaseSchema(
         )
       )
       .where(c.object_id.eq(tableId));
-    const { rows } = await runner.query(sql);
+    const { rows } = await connection.query(sql);
 
     const columns: ColumnSchema[] = [];
     for (const row of rows) {
@@ -308,15 +302,19 @@ export async function loadDatabaseSchema(
         type_scale,
         ...datas
       } = row;
-      const isRowflag = ['ROWVERSION', 'TIMESTAMP'].includes((type_name as string).toUpperCase());
+      const isRowflag = ['ROWVERSION', 'TIMESTAMP'].includes(
+        (type_name as string).toUpperCase()
+      );
       const column: ColumnSchema = {
         // 统一行标记类型
-        type: isRowflag ? provider.sqlUtil.sqlifyType(DbType.rowflag) : fullType(type_name, type_length, type_precision, type_scale),
+        type: isRowflag
+          ? connection.sqlUtil.sqlifyType(DbType.rowflag)
+          : fullType(type_name, type_length, type_precision, type_scale),
         isRowflag,
         defaultValue: defaultValue
           ? defaultValue.substr(1, defaultValue.length - 2)
           : null,
-        ...datas
+        ...datas,
       };
       columns.push(column);
     }
@@ -343,7 +341,7 @@ export async function loadDatabaseSchema(
         and(p.class.eq(1), p.major_id.eq(k.object_id), p.minor_id.eq(0))
       )
       .where(and(i.object_id.eq(tableId), i.is_primary_key.eq(true)));
-    const rows = (await runner.query(sql)).rows;
+    const rows = (await connection.query(sql)).rows;
     const pk: PrimaryKeySchema = rows[0];
 
     if (pk) {
@@ -363,8 +361,11 @@ export async function loadDatabaseSchema(
         .join(i, and(ic.object_id.eq(i.object_id), ic.index_id.eq(i.index_id)))
         .where(and(i.object_id.eq(tableId), i.is_primary_key.eq(true)));
 
-      const { rows: colRows } = await runner.query(colSql);
-      pk.columns = colRows.map(p => ({ name: p.name, isAscending: !p.isDesc }));
+      const { rows: colRows } = await connection.query(colSql);
+      pk.columns = colRows.map((p) => ({
+        name: p.name,
+        isAscending: !p.isDesc,
+      }));
     }
     return pk;
   }
@@ -394,13 +395,15 @@ export async function loadDatabaseSchema(
           .and(d.minor_id.eq(0))
       )
       .where(fk.parent_object_id.eq(tableId));
-    const foreignKeys: ForeignKeySchema[] = (await runner.query(sql))
+    const foreignKeys: ForeignKeySchema[] = (await connection.query(sql))
       .rows as any;
 
     for (const foreignKey of foreignKeys) {
       const foreignKeyId = Reflect.get(foreignKey, 'id');
       Reflect.deleteProperty(foreignKey, 'id');
-      const fkc = table({ name: 'foreign_key_columns', schema: 'sys' }).as('fkc');
+      const fkc = table({ name: 'foreign_key_columns', schema: 'sys' }).as(
+        'fkc'
+      );
       const fc = table({ name: 'columns', schema: 'sys' }).as('fc');
       const rc = table({ name: 'columns', schema: 'sys' }).as('rc');
 
@@ -422,9 +425,9 @@ export async function loadDatabaseSchema(
             .and(rc.column_id.eq(fkc.referenced_column_id))
         )
         .where(fkc.constraint_object_id.eq(foreignKeyId));
-      const rows = (await runner.query(colSql)).rows!;
-      foreignKey.columns = rows.map(p => p.fcolumn);
-      foreignKey.referenceColumns = rows.map(p => p.rcolumn);
+      const rows = (await connection.query(colSql)).rows!;
+      foreignKey.columns = rows.map((p) => p.fcolumn);
+      foreignKey.referenceColumns = rows.map((p) => p.rcolumn);
     }
     return foreignKeys;
   }
@@ -454,13 +457,13 @@ export async function loadDatabaseSchema(
         and(p.class.eq(1), p.major_id.eq(k.object_id), p.minor_id.eq(0))
       )
       .where(and(i.is_unique.eq(false), i.object_id.eq(tableId)));
-    const { rows } = await runner.query(sql);
-    const uniques: UniqueConstraintSchema[] = rows.map(p => ({
+    const { rows } = await connection.query(sql);
+    const uniques: UniqueConstraintSchema[] = rows.map((p) => ({
       kind: 'UNIQUE',
       name: p.name,
       indexName: p.indexName,
       comment: p.comment,
-      columns: []
+      columns: [],
     }));
     const ic = table({ name: 'index_columns', schema: 'sys' }).as('ic');
     // const ik = table('sysindexkeys').as('ik')
@@ -476,11 +479,11 @@ export async function loadDatabaseSchema(
       .join(i, and(ic.object_id.eq(i.object_id), ic.index_id.eq(i.index_id)))
       .where(and(i.is_unique.eq(false), i.object_id.eq(tableId)));
 
-    const { rows: colRows } = await runner.query(colSql);
+    const { rows: colRows } = await connection.query(colSql);
     for (const unique of uniques) {
       unique.columns = colRows
-        .filter(p => p.indexName === Reflect.get(unique, 'indexName'))
-        .map(p => ({ name: p.name, isAscending: !p.isDesc }));
+        .filter((p) => p.indexName === Reflect.get(unique, 'indexName'))
+        .map((p) => ({ name: p.name, isAscending: !p.isDesc }));
       Reflect.deleteProperty(unique, 'indexName');
     }
     return uniques;
@@ -509,7 +512,7 @@ export async function loadDatabaseSchema(
       .where(
         and(c.parent_object_id.eq(tableId), c.type_desc.eq('CHECK_CONSTRAINT'))
       );
-    const { rows } = await runner.query(sql);
+    const { rows } = await connection.query(sql);
     return rows;
   }
 
@@ -544,14 +547,15 @@ export async function loadDatabaseSchema(
         )
       );
     // const st = provider.sqlUtil.sqlify(sql);
-    const { rows } = await runner.query(sql);
+    const { rows } = await connection.query(sql);
     const indexes: IndexSchema[] = rows.map(
-      ({ name, isUnique, isClustered, comment }) => ({
-        name,
-        isUnique,
-        isClustered,
-        comment
-      } as IndexSchema)
+      ({ name, isUnique, isClustered, comment }) =>
+        ({
+          name,
+          isUnique,
+          isClustered,
+          comment,
+        } as IndexSchema)
     );
 
     const ic = table({ name: 'index_columns', schema: 'sys' }).as('ic');
@@ -573,16 +577,16 @@ export async function loadDatabaseSchema(
           i.is_unique_constraint.eq(false)
         )
       );
-    const { rows: colRows } = await runner.query(colSql);
+    const { rows: colRows } = await connection.query(colSql);
     for (const index of indexes) {
       index.columns = colRows
-        .filter(p => p.indexName === index.name)
-        .map(p => ({ name: p.name, isAscending: !p.isDesc }));
+        .filter((p) => p.indexName === index.name)
+        .map((p) => ({ name: p.name, isAscending: !p.isDesc }));
     }
     return indexes;
   }
 
-  const connectionDbName = await provider.getCurrentDatabase();
+  const connectionDbName = await connection.getDatabase();
   if (!dbName) {
     dbName = connectionDbName;
   }
@@ -591,23 +595,25 @@ export async function loadDatabaseSchema(
   const sql = select({
     name: d.name,
     collate: d.collation_name,
-    comment: 'mssql not all comment to database.'
-  }).from(d).where(d.name.eq(dbName))
-  const { rows: [row] } = await provider.lube.query(sql);
+    comment: 'mssql not all comment to database.',
+  })
+    .from(d)
+    .where(d.name.eq(dbName));
+  const {
+    rows: [row],
+  } = await connection.query(sql);
   if (!row) {
     return;
   }
 
-  let runner: Executor
+  return await connection.trans(async () => {
 
-  return await provider.lube.trans(async (executor) => {
-    runner = executor;
 
     // 切换数据库
     if (dbName !== connectionDbName) {
       // 由于数据连接池的原因，极有可能产生一个巨坑，后续任务使用到该连接时，导致数据库与连接字符串不对的错误。
       // 因此在执行完成后，切换回原数据库
-      await runner.query(SqlBuilder.use(dbName!));
+      await connection.query(SQL.use(dbName!));
     }
     const tables = await getTables();
     const views = await getViews();
@@ -616,7 +622,7 @@ export async function loadDatabaseSchema(
     const sequences = await getSequences();
     const schemas = await getSchemas();
     if (dbName !== connectionDbName) {
-      await runner.query(SqlBuilder.use(connectionDbName));
+      await connection.query(SQL.use(connectionDbName));
     }
     return {
       ...row,
@@ -625,9 +631,7 @@ export async function loadDatabaseSchema(
       procedures,
       functions,
       sequences,
-      schemas
+      schemas,
     } as DatabaseSchema;
   });
-
-
 }

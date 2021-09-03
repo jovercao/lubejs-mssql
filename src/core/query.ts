@@ -8,18 +8,15 @@ import {
   Uuid
 } from 'lubejs';
 import { toMssqlType } from './types';
-
-export type IDriver = {
-  request(): mssql.Request;
-};
+import { Connection as MssqlConn } from '@jovercao/mssql'
 
 export async function doQuery(
-  driver: IDriver,
+  conn: MssqlConn,
   sql: string,
   params: Parameter<Scalar, string>[] | undefined,
   options: SqlOptions
-) {
-  const request = await driver.request();
+): Promise<QueryResult<any, any, any>> {
+  const request = await conn.request();
   if (params) {
     params.forEach(
       ({ name, value, type, direction = 'INPUT' }) => {

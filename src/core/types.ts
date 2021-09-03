@@ -1,6 +1,5 @@
 import mssql, { ISqlType } from '@jovercao/mssql';
-import { ConnectOptions, DbType, ISOLATION_LEVEL, isRaw, Raw } from 'lubejs';
-import { MssqlSqlOptions } from './sql-util'
+import { DbType, ISOLATION_LEVEL, Raw } from 'lubejs';
 
 const strTypeMapps: Record<string, any> = {};
 Object.entries(mssql.TYPES).forEach(([name, dbType]) => {
@@ -32,33 +31,9 @@ export function parseRawTypeToMssqlType(type: string): ISqlType {
   return sqlType(Number.parseInt(matched.groups!.p1));
 }
 
-export function fullType(
-  typeName: string,
-  length: number,
-  precision: number,
-  scale: number
-): string {
-  typeName = typeName.toUpperCase();
-  if (
-    ['NVARCHAR', 'VARCHAR', 'NCHAR', 'CHAR', 'VARBINARY', 'BINARY'].includes(
-      typeName
-    )
-  ) {
-    return `${typeName}(${length === -1 ? 'MAX' : length})`;
-  }
-
-  if (typeName === 'DATETIMEOFFSET') {
-    return `${typeName}(${scale})`;
-  }
-
-  if (['DECIMAL', 'NUMERIC'].includes(typeName)) {
-    return `${typeName}(${precision},${scale})`;
-  }
-  return typeName;
-}
 
 export function toMssqlType(type: DbType): mssql.ISqlType {
-  if (isRaw(type)) {
+  if (Raw.isRaw(type)) {
     return parseRawTypeToMssqlType(type.$sql);
   }
   switch (type.name) {
@@ -119,7 +94,7 @@ export function toMssqlIsolationLevel(level: ISOLATION_LEVEL): number {
 }
 
 export function dbTypeToRaw(type: DbType | Raw): string {
-  if (isRaw(type)) return type.$sql;
+  if (Raw.isRaw(type)) return type.$sql;
   switch (type.name) {
     case 'STRING':
       return `VARCHAR(${type.length === DbType.MAX ? 'MAX' : type.length})`;
@@ -219,20 +194,3 @@ export function rawToDbType(type: string): DbType {
 }
 
 
-export interface MssqlConnectOptions extends ConnectOptions {
-  /**
-   * 实例名
-   */
-  instance?: string;
-  /**
-   * 是否启用加密
-   */
-  encrypt?: boolean;
-
-  /**
-   * 是否使用UTC时间，默认为true
-   */
-  useUTC?: boolean;
-
-  sqlOptions?: MssqlSqlOptions;
-}

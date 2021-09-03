@@ -1,26 +1,30 @@
 import {
   MigrateBuilder,
   Statement,
-  SqlBuilder as SQL,
+  SQL,
   CompatibleExpression,
   Scalar,
   Condition,
   SqlUtil,
-  Lube,
   DbType,
   CreateDatabase,
   DropDatabase,
   AlterDatabase,
   CompatiableObjectName,
-  isExpression,
   DbProvider,
+  Expression,
 } from 'lubejs';
-import { sp_rename } from './build-in';
-import { formatSql } from './util';
+import { sp_rename } from '../core/build-in';
+import { formatSql } from '../core/util';
 
 const COMMENT_EXTEND_PROPERTY_NAME = 'MS_Description';
 
 export class MssqlMigrateBuilder extends MigrateBuilder {
+  constructor(provider: DbProvider) {
+    super();
+    this.sqlUtil = provider.sqlUtil;
+  }
+
   throw(errmsg: CompatibleExpression<string>): Statement {
     return SQL.raw(
       `RAISERROR(${
@@ -129,15 +133,7 @@ export class MssqlMigrateBuilder extends MigrateBuilder {
   // existsTable(name: CompatiableObjectName<string>): Expression<Scalar> {
   //   return
   // }
-
-  private readonly lube: Lube;
   private readonly sqlUtil: SqlUtil;
-  constructor(private readonly provider: DbProvider) {
-    super();
-
-    this.lube = provider.lube;
-    this.sqlUtil = provider.sqlUtil;
-  }
 
   setDefaultValue(
     table: CompatiableObjectName<string>,
@@ -160,7 +156,7 @@ BEGIN
 END
 
 ALTER TABLE ${this.sqlUtil.sqlifyObjectName(table)} ADD DEFAULT (${
-      isExpression(defaultValue)
+      Expression.isExpression(defaultValue)
         ? this.sqlUtil.sqlifyExpression(defaultValue)
         : defaultValue
     }) FOR ${this.sqlUtil.quoted(column)}
@@ -232,7 +228,7 @@ END
     sql: Condition,
     name?: string
   ): Statement {
-    return SQL.alterTable(table).add(builder =>
+    return SQL.alterTable(table).add((builder) =>
       name ? builder.check(name, sql) : builder.check(sql)
     );
   }
@@ -241,7 +237,7 @@ END
     table: CompatiableObjectName<string>,
     name: string
   ): Statement {
-    return SQL.alterTable(table).drop(builder => builder.check(name));
+    return SQL.alterTable(table).drop((builder) => builder.check(name));
   }
 
   setIdentity(

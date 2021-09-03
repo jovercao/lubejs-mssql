@@ -5,7 +5,7 @@ import _ from 'lodash';
 import { DB } from './orm';
 
 import {
-  Lube,
+  Connection,
   connect,
   table,
   field,
@@ -81,7 +81,7 @@ while (index < process.argv.length) {
 
 describe.skip('MSSQL ORM TEST', function () {
   this.timeout(0);
-  let db: Lube;
+  let db: Connection;
   let context: DB;
   const dbConfig: ConnectOptions = {
     driver,

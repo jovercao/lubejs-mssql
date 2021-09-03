@@ -8,7 +8,7 @@ import {
   Expression,
   Scalar,
   TsTypeOf,
-  SqlBuilder as SQL,
+  SQL,
   Star,
   Numeric,
 } from 'lubejs';
@@ -57,7 +57,7 @@ export const max: <T extends Exclude<Scalar, Binary>>(
 export const min: <T extends Exclude<Scalar, Binary>>(
   expr: Expression<T>
 ) => Expression<T> = makeInvoke('scalar', 'min', true);
-export const exp: InvokeHandler1<number, number> = makeInvoke(
+export const exp: InvokeHandler1<Numeric, Numeric> = makeInvoke(
   'scalar',
   'exp',
   true
@@ -304,12 +304,12 @@ export const log10: InvokeHandler1<Numeric, Numeric> = makeInvoke(
   true
 );
 export const pi: InvokeHandler0<number> = makeInvoke('scalar', 'pi', true);
-export const power: InvokeHandler2<number, number, number> = makeInvoke(
+export const power: InvokeHandler2<Numeric, Numeric, Numeric> = makeInvoke(
   'scalar',
   'power',
   true
 );
-export const radians: InvokeHandler1<number, number> = makeInvoke(
+export const radians: InvokeHandler1<Numeric, Numeric> = makeInvoke(
   'scalar',
   'radians',
   true
