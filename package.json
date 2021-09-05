@@ -2,13 +2,11 @@
   "name": "lubejs-mssql",
   "version": "3.0.0-preview02",
   "description": "The lubejs driver for mssql.",
-  "main": "dist/index.js",
-  "directories": {
-    "dist": "dist"
-  },
+  "main": "index.js",
   "scripts": {
-    "build": "npm run clean && npm run lint && tsc && npm pack",
-    "clean": "pwsh -c 'rm -r -force dist'",
+    "build": "npm run clean && npm run lint && tsc && npm run pack",
+    "clean": "pwsh -c if (test-path dist) { rm -r -force dist }",
+    "pack": "pwsh -c cp -r typings dist/; cp README.md dist/; cp package.json dist/; cd dist; npm pack;",
     "lint": "eslint --fix ./src --ext .ts"
   },
   "keywords": [
@@ -19,10 +17,6 @@
     "sql",
     "sqlserver",
     "mssqlserver"
-  ],
-  "files": [
-    "dist/**/*.js",
-    "dist/**/*.d.ts"
   ],
   "author": "jover",
   "license": "MIT",

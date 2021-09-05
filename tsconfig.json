@@ -6,6 +6,7 @@
     "emitDecoratorMetadata": true,
     "importHelpers": true,
     "charset": "utf8",
+    "sourceMap": false,
     "allowJs": false,
     "pretty": true,
     "baseUrl": ".",

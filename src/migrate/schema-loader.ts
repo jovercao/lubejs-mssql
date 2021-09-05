@@ -586,7 +586,7 @@ export async function loadDatabaseSchema(
     return indexes;
   }
 
-  const connectionDbName = await connection.getDatabase();
+  const connectionDbName = await connection.getDatabaseName();
   if (!dbName) {
     dbName = connectionDbName;
   }
