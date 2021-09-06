@@ -21,10 +21,10 @@
   "author": "jover",
   "license": "MIT",
   "dependencies": {
-    "@jovercao/mssql": "^7.2.1-jover.2",
     "core-decorators": "^0.20.0"
   },
   "devDependencies": {
+    "@jovercao/mssql": "^7.2.1-jover.4",
     "@types/mssql": "^6.0.8",
     "@types/node": "^14.17.9",
     "@typescript-eslint/eslint-plugin": "^4.29.1",
