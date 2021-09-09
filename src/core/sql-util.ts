@@ -1,4 +1,3 @@
-
 import {
   SqlUtil,
   SqlOptions,
@@ -55,13 +54,15 @@ import {
   ForeignKey,
   CheckConstraint,
   isDbType,
-  DbProvider
+  DbProvider,
+  FunctionParameter,
+  Assignment,
 } from 'lubejs/core';
 import { dbTypeToRaw, rawToDbType } from './types';
 import { MssqlDbProvider } from './provider';
 import { sqlifyLiteral } from './util';
 
-export type MssqlSqlOptions = SqlOptions
+export type MssqlSqlOptions = SqlOptions;
 
 /**
  * 默认编译选项
@@ -106,21 +107,21 @@ export const DefaultSqlOptions: MssqlSqlOptions = {
 };
 
 export class MssqlSqlUtil extends SqlUtil {
-  constructor(
-    provider: DbProvider,
-    options: MssqlSqlOptions | undefined,
-  ) {
+  constructor(provider: DbProvider, options: MssqlSqlOptions | undefined) {
     super(provider, Object.assign({}, DefaultSqlOptions, options));
   }
 
   private parseQuotedName(name: string): string {
-    if (name.startsWith(this.options.quotedLeft) && name.endsWith(this.options.quotedRight)) {
+    if (
+      name.startsWith(this.options.quotedLeft) &&
+      name.endsWith(this.options.quotedRight)
+    ) {
       return name.substr(1, name.length - 2);
     }
     return name.replace(this.escapeDotReg, '.');
   }
 
-  private escapeDotReg = /(?<!\\)\./g
+  private escapeDotReg = /(?<!\\)\./g;
   parseObjectName(name: CompatiableObjectName): ObjectName {
     if (typeof name === 'string') {
       // WARN: 此处可能会产生问题 [table.name] 这种写法将会产生错误解析.
@@ -128,8 +129,8 @@ export class MssqlSqlUtil extends SqlUtil {
       return {
         name: this.parseQuotedName(n),
         schema: schema && this.parseQuotedName(schema),
-        database: database && this.parseQuotedName(database)
-      }
+        database: database && this.parseQuotedName(database),
+      };
     }
     return name;
   }
@@ -137,20 +138,19 @@ export class MssqlSqlUtil extends SqlUtil {
   protected sqlifyCreateDatabase(statement: CreateDatabase): string {
     let sql = `CREATE DATABASE ${this.sqlifyObjectName(statement.$name)}`;
     if (statement.$collate) {
-      sql += ' COLLATE ' + statement.$collate
+      sql += ' COLLATE ' + statement.$collate;
     }
     return sql;
   }
   protected sqlifyAlterDatabase(statement: AlterDatabase): string {
-    return `ALTER DATABASE ${this.sqlifyObjectName(statement.$name)} COLLATE ${statement.$collate}`;
+    return `ALTER DATABASE ${this.sqlifyObjectName(statement.$name)} COLLATE ${
+      statement.$collate
+    }`;
   }
   protected sqlifyDropDatabase(statement: DropDatabase): string {
     return `DROP DATABASE ${this.sqlifyObjectName(statement.$name)}`;
   }
-  protected sqlifyExecute(
-    exec: Execute,
-    params: Set<Parameter>,
-  ): string {
+  protected sqlifyExecute(exec: Execute, params: Set<Parameter>): string {
     const returnParam = SQL.output(
       this.options.returnParameterName!,
       DbType.int32
@@ -165,14 +165,23 @@ export class MssqlSqlUtil extends SqlUtil {
     );
   }
 
-  protected sqlifyBinaryOperation(exp: BinaryOperation, params?: Set<Parameter>): string {
+  protected sqlifyBinaryOperation(
+    exp: BinaryOperation,
+    params?: Set<Parameter>
+  ): string {
     if (exp.$operator === '<<') {
-      return `${this.sqlifyExpression(exp.$left, params)} * POWER(2, ${this.sqlifyExpression(exp.$right, params)})`
+      return `${this.sqlifyExpression(
+        exp.$left,
+        params
+      )} * POWER(2, ${this.sqlifyExpression(exp.$right, params)})`;
     }
     if (exp.$operator === '>>') {
-      return `${this.sqlifyExpression(exp.$left, params)} / POWER(2, ${this.sqlifyExpression(exp.$right, params)})`
+      return `${this.sqlifyExpression(
+        exp.$left,
+        params
+      )} / POWER(2, ${this.sqlifyExpression(exp.$right, params)})`;
     }
-    return super.sqlifyBinaryOperation(exp, params)
+    return super.sqlifyBinaryOperation(exp, params);
   }
 
   sqlifyContinue(statement: Continue): string {
@@ -181,10 +190,7 @@ export class MssqlSqlUtil extends SqlUtil {
   sqlifyBreak(statement: Break): string {
     return 'BREAK';
   }
-  sqlifyWhile(
-    statement: While,
-    params?: Set<Parameter>
-  ): string {
+  sqlifyWhile(statement: While, params?: Set<Parameter>): string {
     this.assertAst(
       statement.$statement,
       'In while statement, do statement not found.'
@@ -205,10 +211,7 @@ export class MssqlSqlUtil extends SqlUtil {
     if (statement.$elseif && statement.$elseif.length > 0) {
       sql += statement.$elseif
         .map(([condition, statement]) => {
-          this.assertAst(
-            statement,
-            'In if statement, elseif then not found'
-          );
+          this.assertAst(statement, 'In if statement, elseif then not found');
           return `ELSE IF (${this.sqlifyCondition(
             condition
           )}) ${this.sqlifyStatement(statement)}`;
@@ -230,14 +233,14 @@ export class MssqlSqlUtil extends SqlUtil {
     if (statement.$style === 'LINE') {
       return statement.$text
         .split(/\n|\r\n/g)
-        .map(line => '-- ' + line)
+        .map((line) => '-- ' + line)
         .join('\n');
     }
     return (
       '/**\n' +
       statement.$text
         .split(/\n|\r\n/g)
-        .map(line => ' * ' + line.replace(/\*\//g, '* /'))
+        .map((line) => ' * ' + line.replace(/\*\//g, '* /'))
         .join('\n') +
       '\n */'
     );
@@ -264,9 +267,19 @@ export class MssqlSqlUtil extends SqlUtil {
     let sql = `${this.sqlifyVariantName(param.$name)} ${this.sqlifyType(
       param.$dbType
     )}`;
-    if (param.$direct) {
+    if (param.$direct === 'OUTPUT') {
       sql += ' ' + param.$direct;
     }
+    if (param.$default) {
+      sql += ' = ' + this.sqlifyLiteral(param.$default.$value);
+    }
+    return sql;
+  }
+
+  protected sqlifyFunctionParameter(param: FunctionParameter): string {
+    let sql = `${this.sqlifyVariantName(param.$name)} ${this.sqlifyType(
+      param.$dbType
+    )}`;
     if (param.$default) {
       sql += ' = ' + this.sqlifyLiteral(param.$default.$value);
     }
@@ -279,12 +292,14 @@ export class MssqlSqlUtil extends SqlUtil {
     parent?: SQL
   ): string {
     return `BEGIN\n  ${statement.$statements
-      .map(statement => this.sqlifyStatement(statement, params, parent))
+      .map((statement) => this.sqlifyStatement(statement, params, parent))
       .join('\n  ')}\nEND`;
   }
 
   protected sqlifyDropIndex(index: DropIndex): string {
-    return `DROP INDEX ${this.sqlifyObjectName(index.$table)}.${this.quoted(index.$name)}`;
+    return `DROP INDEX ${this.sqlifyObjectName(index.$table)}.${this.quoted(
+      index.$name
+    )}`;
   }
 
   protected sqlifyCreateIndex(statement: CreateIndex): string {
@@ -298,10 +313,10 @@ export class MssqlSqlUtil extends SqlUtil {
     this.assertAst(statement.$name, `Index name not found.`);
     this.assertAst(statement.$table, `Index on table not found.`);
     this.assertAst(statement.$columns, `Index columns not found.`);
-    sql += `INDEX ${this.sqlifyObjectName(statement.$name)} ON ${this.sqlifyObjectName(
-      statement.$table
-    )}(${statement.$columns
-      .map(col => `${this.quoted(col.name)} ${col.sort}`)
+    sql += `INDEX ${this.sqlifyObjectName(
+      statement.$name
+    )} ON ${this.sqlifyObjectName(statement.$table)}(${statement.$columns
+      .map((col) => `${this.quoted(col.name)} ${col.sort}`)
       .join(', ')})`;
     return sql;
   }
@@ -311,13 +326,44 @@ export class MssqlSqlUtil extends SqlUtil {
   }
 
   protected sqlifyAlterFunction(statement: AlterFunction): string {
+    // return `ALTER FUNCTION ${this.sqlifyObjectName(statement.$name)}(${
+    //   statement.$params
+    //     ? statement.$params
+    //         .map((param) => this.sqlifyVariantDeclare(param))
+    //         .join(', ')
+    //     : ''
+    // }) `;
+
+    this.assertAst(
+      statement.$body,
+      'In AlterFunction statement, as statement not found.'
+    );
+    this.assertAst(
+      statement.$returns,
+      'In AlterFunction statement, returns type not found.'
+    );
     return `ALTER FUNCTION ${this.sqlifyObjectName(statement.$name)}(${
       statement.$params
         ? statement.$params
-            .map(param => this.sqlifyVariantDeclare(param))
+            .map((param) => this.sqlifyFunctionParameter(param))
             .join(', ')
         : ''
-    }) `;
+    }) RETURNS ${
+      Raw.isRaw(statement.$returns)
+        ? statement.$returns.$sql
+        : isDbType(statement.$returns)
+        ? this.sqlifyType(statement.$returns)
+        : TableVariantDeclare.isTableVariantDeclare(statement.$returns)
+        ? this.sqlifyTableVariantDeclare(statement.$returns)
+        : this.sqlifyFunctionParameter(statement.$returns)
+    } AS ${this.sqlifyStatement(statement.$body)}`;
+  }
+
+  protected sqlifyAssignment(
+    assign: Assignment,
+    params?: Set<Parameter<Scalar, string>>
+  ): string {
+    return 'SET ' + super.sqlifyAssignment(assign, params);
   }
 
   protected sqlifyCreateFunction(statement: CreateFunction): string {
@@ -332,7 +378,7 @@ export class MssqlSqlUtil extends SqlUtil {
     return `CREATE FUNCTION ${this.sqlifyObjectName(statement.$name)}(${
       statement.$params
         ? statement.$params
-            .map(param => this.sqlifyVariantDeclare(param))
+            .map((param) => this.sqlifyFunctionParameter(param))
             .join(', ')
         : ''
     }) RETURNS ${
@@ -340,10 +386,10 @@ export class MssqlSqlUtil extends SqlUtil {
         ? statement.$returns.$sql
         : isDbType(statement.$returns)
         ? this.sqlifyType(statement.$returns)
-        : VariantDeclare.isVariantDeclare(statement.$returns)
-        ? this.sqlifyVariantDeclare(statement.$returns)
-        : this.sqlifyTableVariantDeclare(statement.$returns)
-    } AS ${this.sqlifyStatements(statement.$body)}`;
+        : TableVariantDeclare.isTableVariantDeclare(statement.$returns)
+        ? this.sqlifyTableVariantDeclare(statement.$returns)
+        : this.sqlifyFunctionParameter(statement.$returns)
+    } AS ${this.sqlifyStatement(statement.$body)}`;
   }
 
   protected sqlifyDropProcedure(statement: DropProcedure): string {
@@ -351,23 +397,25 @@ export class MssqlSqlUtil extends SqlUtil {
   }
 
   protected sqlifyAlterProcedure(statement: AlterProcedure): string {
+    this.assertAst(statement.$body, 'AlterProcedure body statements not found, Pls use .as(...) assign it.')
     return `ALTER PROCEDURE ${this.sqlifyObjectName(statement.$name)} (${
       statement.$params
         ? statement.$params
-            .map(param => this.sqlifyProcedureParameter(param))
+            .map((param) => this.sqlifyProcedureParameter(param))
             .join(', ')
         : ''
-    })`;
+    }) AS ` + this.sqlifyStatement(statement.$body);
   }
 
   protected sqlifyCreateProcedure(statement: CreateProcedure): string {
+    this.assertAst(statement.$body, 'CreateProcedure body statements not found, Pls use .as(...) assign it.')
     return `CREATE PROCEDURE ${this.sqlifyObjectName(statement.$name)} (${
       statement.$params
         ? statement.$params
-            .map(param => this.sqlifyProcedureParameter(param))
+            .map((param) => this.sqlifyProcedureParameter(param))
             .join(', ')
         : ''
-    })`;
+    }) AS ` + this.sqlifyStatement(statement.$body);
   }
 
   protected sqlifyAlterTable(statement: AlterTable<string>): string {
@@ -375,7 +423,7 @@ export class MssqlSqlUtil extends SqlUtil {
     if (statement.$adds) {
       sql += ' ADD ';
       sql += statement.$adds
-        .map(member => this.sqlifyTableMember(member))
+        .map((member) => this.sqlifyTableMember(member))
         .join(',\n  ');
     }
     if (statement.$drop) {
@@ -396,7 +444,9 @@ export class MssqlSqlUtil extends SqlUtil {
     return sql;
   }
 
-  private sqlifyTableMember(member: ColumnDeclareForAlter | AlterTableAddMember | CreateTableMember) {
+  private sqlifyTableMember(
+    member: ColumnDeclareForAlter | AlterTableAddMember | CreateTableMember
+  ) {
     if (ColumnDeclareForAlter.isColumnDeclareForAlter(member)) {
       let sql = `${this.quoted(member.$name)} ${this.sqlifyType(
         member.$dbType
@@ -439,7 +489,7 @@ export class MssqlSqlUtil extends SqlUtil {
       return (
         (member.$name ? `CONSTRAINT ${this.quoted(member.$name)} ` : '') +
         ` PRIMARY KEY(${member.$columns.map(
-          col => `${this.quoted(col.name)} ${col.sort}`
+          (col) => `${this.quoted(col.name)} ${col.sort}`
         )})`
       );
     }
@@ -449,7 +499,7 @@ export class MssqlSqlUtil extends SqlUtil {
       return (
         (member.$name ? `CONSTRAINT ${this.quoted(member.$name)} ` : '') +
         `UNIQUE(${member.$columns.map(
-          col => `${this.quoted(col.name)} ${col.sort}`
+          (col) => `${this.quoted(col.name)} ${col.sort}`
         )})`
       );
     }
@@ -466,11 +516,13 @@ export class MssqlSqlUtil extends SqlUtil {
       );
       return (
         (member.$name ? `CONSTRAINT ${this.quoted(member.$name)} ` : '') +
-        `FOREIGN KEY(${member.$columns.map(col =>
+        `FOREIGN KEY(${member.$columns.map((col) =>
           this.quoted(col)
         )}) REFERENCES ${this.sqlifyObjectName(
           member.$referenceTable
-        )}(${member.$referenceColumns.map(col => this.quoted(col)).join(', ')})`
+        )}(${member.$referenceColumns
+          .map((col) => this.quoted(col))
+          .join(', ')})`
       );
     }
 
@@ -483,13 +535,10 @@ export class MssqlSqlUtil extends SqlUtil {
   }
 
   sqlifyCreateTable(statement: CreateTable): string {
-    this.assertAst(
-      statement.$members,
-      'CreateTable statement name not found.'
-    );
+    this.assertAst(statement.$members, 'CreateTable statement name not found.');
     let sql = `CREATE TABLE ${this.sqlifyObjectName(statement.$name)} (`;
     sql += statement.$members
-      .map(member => this.sqlifyTableMember(member))
+      .map((member) => this.sqlifyTableMember(member))
       .join(',\n  ');
     sql += ')';
     return sql;
@@ -518,7 +567,7 @@ SET IDENTITY_INSERT ${this.sqlifyObjectName(insert.$table.$name)} OFF
     );
     let sql = `${this.sqlifyVariantName(declare.$name)} TABLE(`;
     sql += declare.$members
-      .map(member => this.sqlifyTableMember(member))
+      .map((member) => this.sqlifyTableMember(member))
       .join(',\n  ');
     sql += ')';
     return sql;

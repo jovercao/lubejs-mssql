@@ -94,11 +94,12 @@ export class MssqlConnection extends Connection {
   public readonly options!: MssqlConnectOptions;
 
   async beginTrans(isolationLevel: ISOLATION_LEVEL = ISOLATION_LEVEL.READ_COMMIT): Promise<void> {
+    await this._autoOpen();
     await this._connection.beginTrans(toMssqlIsolationLevel(isolationLevel))
   }
 
   get opened(): boolean {
-    return this._connection.opened;
+    return this._connection.connected;
   }
 
   async open(): Promise<void> {
@@ -113,7 +114,7 @@ export class MssqlConnection extends Connection {
   }
 
   async rollback(): Promise<void> {
-    await this._connection.commit();
+    await this._connection.rollback();
   }
 
   get inTransaction(): boolean {
@@ -140,7 +141,6 @@ export class MssqlConnection extends Connection {
       await this.open();
     }
   }
-
 }
 
 export interface MssqlConnectOptions extends ConnectOptions {

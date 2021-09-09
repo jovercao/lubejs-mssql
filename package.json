@@ -6,7 +6,7 @@
   "scripts": {
     "build": "npm run clean && npm run lint && tsc && npm run pack",
     "clean": "pwsh -c if (test-path dist) { rm -r -force dist }",
-    "pack": "pwsh -c cp -r typings dist/; cp README.md dist/; cp package.json dist/; cd dist; npm pack;",
+    "pack": "pwsh -c cp README.md dist/; cp package.json dist/; cd dist; npm pack;",
     "lint": "eslint --fix ./src --ext .ts"
   },
   "keywords": [
@@ -21,10 +21,10 @@
   "author": "jover",
   "license": "MIT",
   "dependencies": {
+    "@jovercao/mssql": "^7.2.1-jover.6",
     "core-decorators": "^0.20.0"
   },
   "devDependencies": {
-    "@jovercao/mssql": "^7.2.1-jover.4",
     "@types/mssql": "^6.0.8",
     "@types/node": "^14.17.9",
     "@typescript-eslint/eslint-plugin": "^4.29.1",

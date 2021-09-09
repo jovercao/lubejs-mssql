@@ -126,7 +126,7 @@ export function dbTypeToRaw(type: DbType | Raw): string {
     case 'ARRAY':
       return 'NVARCHAR(MAX)';
     case 'ROWFLAG':
-      return 'BINARY(8)';
+      return 'TIMESTAMP';
     case 'DATETIMEOFFSET':
       return 'DATETIMEOFFSET(7)';
     default:

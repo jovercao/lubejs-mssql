@@ -1,4 +1,4 @@
-import { MssqlDbProvider } from 'src/core/provider';
+import { MssqlDbProvider } from '../core/provider';
 import { MssqlMigrateBuilder } from './migrate-builder';
 
 MssqlDbProvider.prototype.getMigrateBuilder = function () {

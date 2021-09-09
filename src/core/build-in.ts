@@ -935,6 +935,13 @@ export const database_principal_id: (
 ) => Expression<string> = makeInvoke('scalar', 'database_principal_id', true);
 
 /**
+ * 获取数据库的上级ID
+ */
+ export const db_id: (
+  dbName: CompatibleExpression<string>
+) => Expression<number> = makeInvoke('scalar', 'db_id', true);
+
+/**
  * 系统重命名函数
  */
 export const sp_rename: (

@@ -52,6 +52,8 @@ import {
   object_id,
   db_name,
   schema_name,
+  database_principal_id,
+  db_id,
 } from './build-in';
 import {
   Binary,
@@ -551,14 +553,7 @@ export class MssqlStandardTranslator implements StandardTranslator {
   }
 
   existsDatabase(database: string): Condition {
-    return SQL.exists(
-      SQL.select(1)
-        .from({
-          schema: 'sys',
-          name: 'tables',
-        })
-        .where(SQL.field('name').eq(database))
-    );
+    return db_id(database).isNotNull();
   }
 
   existsView(name: CompatiableObjectName): Condition {

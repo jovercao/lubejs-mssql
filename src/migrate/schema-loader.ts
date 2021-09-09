@@ -20,7 +20,7 @@ import { SQL, DbType } from 'lubejs/core';
 
 import { database_principal_id } from '../core/build-in';
 import { fullType } from './util';
-import { MssqlConnection } from 'src/core/connection';
+import { MssqlConnection } from '../core/connection';
 
 const {
   case: $case,
@@ -59,7 +59,7 @@ export async function loadDatabaseSchema(
           .and(p.class.eq(1))
           .and(p.name.eq('MS_Description'))
       )
-      .where(t.name.notIn(...excludeTables));
+      .where(and(t.type.eq('U'), t.name.notIn(...excludeTables)));
 
     const tables: TableSchema[] = (await connection.query(sql)).rows as any;
 
@@ -80,7 +80,7 @@ export async function loadDatabaseSchema(
 
   async function getSchemas(): Promise<SchemaSchema[]> {
     const p = table({ name: 'extended_properties', schema: 'sys' }).as('p');
-    const s = table({ name: 'schemas', schema: 'sys' });
+    const s = table({ name: 'schemas', schema: 'sys' }).as('s');
     const sql = select({
       name: s.name,
       comment: p.value,
@@ -121,7 +121,7 @@ export async function loadDatabaseSchema(
           .and(p.class.eq(1))
           .and(p.name.eq('MS_Description'))
       )
-      .where(v.name.notIn(...excludeTables));
+      .where(and(v.type.eq('U'), v.name.notIn(...excludeTables)));
     const result = (await connection.query(sql)).rows;
     const views: ViewSchema[] = result;
 
@@ -152,7 +152,7 @@ export async function loadDatabaseSchema(
           .and(p.class.eq(1))
           .and(p.name.eq('MS_Description'))
       )
-      .where(proc.name.notIn(...excludeTables));
+      .where(and(proc.type.eq('U'), proc.name.notIn(...excludeTables)));
     const result = (await connection.query(sql)).rows;
     const procedures: ProcedureSchema[] = result;
 
@@ -164,7 +164,9 @@ export async function loadDatabaseSchema(
 
   async function getCode(objname: string): Promise<string> {
     const rows = (
-      await connection.execute<number, [{ Text: string }]>('sp_helptext', [objname])
+      await connection.execute<number, [{ Text: string }]>('sp_helptext', [
+        objname,
+      ])
     ).rows;
     const key = Object.keys(rows[0])[0];
     const code = rows.map((row) => Reflect.get(row, key)).join('\n');
@@ -192,7 +194,7 @@ export async function loadDatabaseSchema(
           .and(p.class.eq(1))
           .and(p.name.eq('MS_Description'))
       )
-      .where(fn.type.eq('FN'));
+      .where(and(fn.type.eq('U'), fn.type.eq('FN')));
     const result = (await connection.query(sql)).rows;
     const functions: FunctionSchema[] = result;
 
@@ -607,8 +609,6 @@ export async function loadDatabaseSchema(
   }
 
   return await connection.trans(async () => {
-
-
     // 切换数据库
     if (dbName !== connectionDbName) {
       // 由于数据连接池的原因，极有可能产生一个巨坑，后续任务使用到该连接时，导致数据库与连接字符串不对的错误。
