@@ -257,11 +257,15 @@ export class MssqlSqlUtil extends SqlUtil {
     return `DROP SEQUENCE ${this.sqlifyObjectName(statement.$name)}`;
   }
   protected sqlifyCreateSequence(statement: CreateSequence): string {
+    this.assertAst(
+      statement.$dbType,
+      'Sequence dbType not found, pls use `.as(dbType)` to set it.'
+    );
     return `CREATE SEQUENCE ${this.sqlifyObjectName(
       statement.$name
-    )} START WITH ${this.sqlifyLiteral(
+    )} AS ${this.sqlifyType(statement.$dbType)} START WITH ${this.sqlifyLiteral(
       statement.$startValue.$value
-    )} INCREMENT BYH ${this.sqlifyLiteral(statement.$increment.$value)}`;
+    )} INCREMENT BY ${this.sqlifyLiteral(statement.$increment.$value)}`;
   }
   protected sqlifyProcedureParameter(param: ProcedureParameter): string {
     let sql = `${this.sqlifyVariantName(param.$name)} ${this.sqlifyType(
@@ -397,25 +401,35 @@ export class MssqlSqlUtil extends SqlUtil {
   }
 
   protected sqlifyAlterProcedure(statement: AlterProcedure): string {
-    this.assertAst(statement.$body, 'AlterProcedure body statements not found, Pls use .as(...) assign it.')
-    return `ALTER PROCEDURE ${this.sqlifyObjectName(statement.$name)} (${
-      statement.$params
-        ? statement.$params
-            .map((param) => this.sqlifyProcedureParameter(param))
-            .join(', ')
-        : ''
-    }) AS ` + this.sqlifyStatement(statement.$body);
+    this.assertAst(
+      statement.$body,
+      'AlterProcedure body statements not found, Pls use .as(...) assign it.'
+    );
+    return (
+      `ALTER PROCEDURE ${this.sqlifyObjectName(statement.$name)} (${
+        statement.$params
+          ? statement.$params
+              .map((param) => this.sqlifyProcedureParameter(param))
+              .join(', ')
+          : ''
+      }) AS ` + this.sqlifyStatement(statement.$body)
+    );
   }
 
   protected sqlifyCreateProcedure(statement: CreateProcedure): string {
-    this.assertAst(statement.$body, 'CreateProcedure body statements not found, Pls use .as(...) assign it.')
-    return `CREATE PROCEDURE ${this.sqlifyObjectName(statement.$name)} (${
-      statement.$params
-        ? statement.$params
-            .map((param) => this.sqlifyProcedureParameter(param))
-            .join(', ')
-        : ''
-    }) AS ` + this.sqlifyStatement(statement.$body);
+    this.assertAst(
+      statement.$body,
+      'CreateProcedure body statements not found, Pls use .as(...) assign it.'
+    );
+    return (
+      `CREATE PROCEDURE ${this.sqlifyObjectName(statement.$name)} (${
+        statement.$params
+          ? statement.$params
+              .map((param) => this.sqlifyProcedureParameter(param))
+              .join(', ')
+          : ''
+      }) AS ` + this.sqlifyStatement(statement.$body)
+    );
   }
 
   protected sqlifyAlterTable(statement: AlterTable<string>): string {

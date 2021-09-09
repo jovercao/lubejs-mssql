@@ -619,4 +619,12 @@ export class MssqlStandardTranslator implements StandardTranslator {
         )
     );
   }
+
+  sequenceNextValue<T extends Numeric>(
+    sequenceName: CompatiableObjectName<string>
+  ): Expression<T> {
+    return SQL.raw(
+      `NEXT VALUE FOR ${this.sqlUtil.sqlifyObjectName(sequenceName)}`
+    );
+  }
 }
