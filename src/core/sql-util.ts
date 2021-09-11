@@ -57,6 +57,7 @@ import {
   DbProvider,
   FunctionParameter,
   Assignment,
+  BINARY_OPERATION_OPERATOR,
 } from 'lubejs/core';
 import { dbTypeToRaw, rawToDbType } from './types';
 import { MssqlDbProvider } from './provider';
@@ -169,17 +170,22 @@ export class MssqlSqlUtil extends SqlUtil {
     exp: BinaryOperation,
     params?: Set<Parameter>
   ): string {
-    if (exp.$operator === '<<') {
+    if (exp.$operator === BINARY_OPERATION_OPERATOR.SHL) {
       return `${this.sqlifyExpression(
         exp.$left,
         params
       )} * POWER(2, ${this.sqlifyExpression(exp.$right, params)})`;
     }
-    if (exp.$operator === '>>') {
+    if (exp.$operator === BINARY_OPERATION_OPERATOR.SHR) {
       return `${this.sqlifyExpression(
         exp.$left,
         params
       )} / POWER(2, ${this.sqlifyExpression(exp.$right, params)})`;
+    }
+    if (exp.$operator === BINARY_OPERATION_OPERATOR.CONCAT) {
+      return `${this.sqlifyExpression(exp.$left)} + ${this.sqlifyExpression(
+        exp.$right
+      )}`;
     }
     return super.sqlifyBinaryOperation(exp, params);
   }
