@@ -4,7 +4,7 @@
   "description": "The lubejs driver for mssql.",
   "main": "index.js",
   "scripts": {
-    "build": "npm run clean && npm run lint && tsc && npm run pack",
+    "build": "npm run clean && npm run lint && tsc && cp README.md dist/ && cp README-zh_CN.md dist/ && npm run pack",
     "clean": "pwsh -c if (test-path dist) { rm -r -force dist }",
     "pack": "pwsh -c cp README.md dist/; cp package.json dist/; cd dist; npm pack;",
     "lint": "eslint --fix ./src --ext .ts"
