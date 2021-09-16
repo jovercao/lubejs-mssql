@@ -19,7 +19,7 @@
     "mssqlserver"
   ],
   "author": "jover",
-  "license": "MIT",
+  "license": "Apache License 2.0",
   "dependencies": {
     "@jovercao/mssql": "^7.2.1-jover.6",
     "core-decorators": "^0.20.0"
