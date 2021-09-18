@@ -1,6 +1,16 @@
-import { Connection, ConnectOptions, DbProvider, ISOLATION_LEVEL, QueryResult, SqlUtil } from 'lubejs/core';
+import {
+  Connection,
+  ConnectOptions,
+  DbProvider,
+  ISOLATION_LEVEL,
+  QueryResult,
+  SqlUtil,
+} from 'lubejs/core';
 import { toMssqlIsolationLevel } from './types';
-import { config as MssqlConfig, Connection as MssqlConn} from '@jovercao/mssql'
+import {
+  config as MssqlConfig,
+  Connection as MssqlConn,
+} from '@jovercao/mssql';
 import { MssqlDbProvider } from './provider';
 import { doQuery } from './query';
 import { MssqlSqlOptions, MssqlSqlUtil } from './sql-util';
@@ -25,7 +35,6 @@ const DefaultConnectOptions: MssqlConfig = {
   // // 严格模式
   // strict: true,
 };
-
 
 export function parseMssqlConfig(options: MssqlConnectOptions): MssqlConfig {
   const mssqlOptions: MssqlConfig = Object.assign({}, DefaultConnectOptions);
@@ -73,14 +82,10 @@ export function parseMssqlConfig(options: MssqlConnectOptions): MssqlConfig {
 }
 
 export class MssqlConnection extends Connection {
-  constructor(
-    provider: DbProvider,
-    options: MssqlConnectOptions
-  ) {
+  constructor(provider: DbProvider, options: MssqlConnectOptions) {
     super(provider, options);
     this._connection = new MssqlConn(this.mssqlOptions);
   }
-
 
   private _connection: MssqlConn;
   private _mssqlOptions?: MssqlConfig;
@@ -93,19 +98,25 @@ export class MssqlConnection extends Connection {
 
   public readonly options!: MssqlConnectOptions;
 
-  async beginTrans(isolationLevel: ISOLATION_LEVEL = ISOLATION_LEVEL.READ_COMMIT): Promise<void> {
+  async beginTrans(
+    isolationLevel: ISOLATION_LEVEL = ISOLATION_LEVEL.READ_COMMIT
+  ): Promise<void> {
     await this._autoOpen();
-    await this._connection.beginTrans(toMssqlIsolationLevel(isolationLevel))
+    await this._connection.beginTrans(toMssqlIsolationLevel(isolationLevel));
   }
 
+  private _opened: boolean = false;
+
   get opened(): boolean {
-    return this._connection.connected;
+    return this._opened;
   }
 
   async open(): Promise<void> {
     await this._connection.open();
+    this._opened = true;
   }
   async close(): Promise<void> {
+    this._opened = false;
     await this._connection.close();
   }
 
@@ -125,7 +136,9 @@ export class MssqlConnection extends Connection {
    * 获取数据库架构
    */
   getSchema(dbname?: string): any {
-    throw new Error('This is a orm use kind, Pls import the full node module `lubejs-mssql`.');
+    throw new Error(
+      'This is a orm use kind, Pls import the full node module `lubejs-mssql`.'
+    );
   }
 
   protected async doQuery(
@@ -133,7 +146,12 @@ export class MssqlConnection extends Connection {
     params?: any[]
   ): Promise<QueryResult<any, any, any>> {
     await this._autoOpen();
-    return doQuery(this._connection, sql, params, this.provider.sqlUtil.options);
+    return doQuery(
+      this._connection,
+      sql,
+      params,
+      this.provider.sqlUtil.options
+    );
   }
 
   private async _autoOpen(): Promise<void> {
