@@ -107,15 +107,36 @@ export class MssqlConnection extends Connection {
 
   private _opened: boolean = false;
 
+  private _openning: boolean = false;
+
   get opened(): boolean {
     return this._opened;
   }
 
-  async open(): Promise<void> {
-    await this._connection.open();
-    this._opened = true;
+  get openning(): boolean {
+    return this._openning;
   }
+
+  async open(): Promise<void> {
+    if (this._opened) {
+      throw new Error(`Then connection is opened.`);
+    }
+    if (this._openning) {
+      throw new Error(`Then connection is openning now.`);
+    }
+    this._openning = true;
+    try {
+      await this._connection.open();
+      this._opened = true;
+    } finally {
+      this._openning = false;
+    }
+  }
+
   async close(): Promise<void> {
+    if (!this._opened) {
+      throw new Error(`The connection is not opened.`);
+    }
     this._opened = false;
     await this._connection.close();
   }
