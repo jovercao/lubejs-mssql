@@ -4,14 +4,8 @@ import {
   DbType,
   Select,
   Parameter,
-  StandardTranslator,
-  CompatibleExpression,
-  Star,
-  Expression,
   Scalar,
-  Binary,
-  TsTypeOf,
-  TableVariantDeclare,
+  TableVariant,
   Insert,
   SQL,
   SQL_SYMBOLE_TABLE_MEMBER,
@@ -44,10 +38,7 @@ import {
   ObjectName,
   Raw,
   ColumnDeclareForAlter,
-  Condition,
   BinaryOperation,
-  Numeric,
-  VariantDeclare,
   ColumnDeclareForAdd,
   PrimaryKey,
   UniqueKey,
@@ -58,9 +49,10 @@ import {
   FunctionParameter,
   Assignment,
   BINARY_OPERATION_OPERATOR,
+  Variant,
+  PARAMETER_DIRECTION,
 } from 'lubejs/core';
 import { dbTypeToRaw, rawToDbType } from './types';
-import { MssqlDbProvider } from './provider';
 import { sqlifyLiteral } from './util';
 
 export type MssqlSqlOptions = SqlOptions;
@@ -108,6 +100,14 @@ export const DefaultSqlOptions: MssqlSqlOptions = {
 };
 
 export class MssqlSqlUtil extends SqlUtil {
+  protected sqlifyDirection(direction: PARAMETER_DIRECTION): string {
+    if (direction === 'IN') {
+      return '';
+    }
+
+    return 'OUTPUT';
+  }
+
   constructor(provider: DbProvider, options: MssqlSqlOptions | undefined) {
     super(provider, Object.assign({}, DefaultSqlOptions, options));
   }
@@ -277,12 +277,10 @@ export class MssqlSqlUtil extends SqlUtil {
     let sql = `${this.sqlifyVariantName(param.$name)} ${this.sqlifyType(
       param.$dbType
     )}`;
-    if (param.$direct === 'OUTPUT') {
-      sql += ' ' + param.$direct;
-    }
     if (param.$default) {
       sql += ' = ' + this.sqlifyLiteral(param.$default.$value);
     }
+    sql += ' ' + this.sqlifyDirection(param.$direct);
     return sql;
   }
 
@@ -363,8 +361,10 @@ export class MssqlSqlUtil extends SqlUtil {
         ? statement.$returns.$sql
         : isDbType(statement.$returns)
         ? this.sqlifyType(statement.$returns)
-        : TableVariantDeclare.isTableVariantDeclare(statement.$returns)
+        : TableVariant.isTableVariant(statement.$returns)
         ? this.sqlifyTableVariantDeclare(statement.$returns)
+        : Variant.isVariant(statement.$returns)
+        ? this.sqlifyVariantDeclare(statement.$returns)
         : this.sqlifyFunctionParameter(statement.$returns)
     } AS ${this.sqlifyStatement(statement.$body)}`;
   }
@@ -396,8 +396,10 @@ export class MssqlSqlUtil extends SqlUtil {
         ? statement.$returns.$sql
         : isDbType(statement.$returns)
         ? this.sqlifyType(statement.$returns)
-        : TableVariantDeclare.isTableVariantDeclare(statement.$returns)
+        : TableVariant.isTableVariant(statement.$returns)
         ? this.sqlifyTableVariantDeclare(statement.$returns)
+        : Variant.isVariant(statement.$returns)
+        ? this.sqlifyVariantDeclare(statement.$returns)
         : this.sqlifyFunctionParameter(statement.$returns)
     } AS ${this.sqlifyStatement(statement.$body)}`;
   }
@@ -577,9 +579,7 @@ SET IDENTITY_INSERT ${this.sqlifyObjectName(insert.$table.$name)} OFF
 `;
   }
 
-  protected sqlifyTableVariantDeclare(
-    declare: TableVariantDeclare<any>
-  ): string {
+  protected sqlifyTableVariantDeclare(declare: TableVariant<any>): string {
     this.assertAst(declare.$name, 'Table Variant declare name not found.');
     this.assertAst(
       declare.$members,

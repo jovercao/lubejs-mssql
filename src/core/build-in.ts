@@ -13,7 +13,7 @@ import {
   Numeric,
 } from 'lubejs';
 
-const { makeExec, variant, builtIn, func, makeInvoke } = SQL;
+const { makeExec, var: variant, builtIn, func, makeInvoke } = SQL;
 
 type InvokeHandler0<TResult extends Scalar> = () => Expression<TResult>;
 type InvokeHandler1<TResult extends Scalar, TArg1 extends Scalar> = (
@@ -408,7 +408,6 @@ export const FUNCTION = {
   tan,
 };
 
-
 export const YEAR = builtIn('YEAR');
 export const YY = builtIn('YY');
 export const YYYY = builtIn('YYYY');
@@ -479,89 +478,128 @@ export const DATE_PART = {
 /**
  * 最后一次插入数据的标识列值
  */
-export const IDENTITY = variant<number, '@IDENTITY'>('@IDENTITY');
+export const IDENTITY = variant<number, '@IDENTITY'>('@IDENTITY', DbType.int32);
 /**
  * 最后一次执行受影响函数
  */
-export const ROWCOUNT = variant<number, '@ROWCOUNT'>('@ROWCOUNT');
+export const ROWCOUNT = variant<number, '@ROWCOUNT'>('@ROWCOUNT', DbType.int32);
 /**
  * 返回自上次启动 Microsoft SQL Server以来连接或试图连接的次数。
  */
-export const CONNECTIONS = variant<number, '@CONNECTIONS'>('@CONNECTIONS');
+export const CONNECTIONS = variant<number, '@CONNECTIONS'>(
+  '@CONNECTIONS',
+  DbType.int64
+);
 /**
  * 返回自上次启动 Microsoft SQL Server以来 CPU 的工作时间，单位为毫秒（基于系统计时器的分辨率）。
  */
-export const CPU_BUSY = variant<number, '@CPU_BUSY'>('@CPU_BUSY');
+export const CPU_BUSY = variant<number, '@CPU_BUSY'>(
+  '@CPU_BUSY',
+  DbType.double
+);
 /**
  * 返回 SET DATEFIRST 参数的当前值，SET DATEFIRST 参数指明所规定的每周第一天：1 对应星期一，2 对应星期二，依次类推，用 7 对应星期日。
  */
-export const DATEFIRST = variant<number, '@DATEFIRST'>('@DATEFIRST');
+export const DATEFIRST = variant<number, '@DATEFIRST'>(
+  '@DATEFIRST',
+  DbType.int32
+);
 /**
  * 返回 Microsoft SQL Server自上次启动后用于执行输入和输出操作的时间，单位为毫秒（基于系统计时器的分辨率）。
  */
-export const IO_BUSY = variant<number, '@IO_BUSY'>('@IO_BUSY');
+export const IO_BUSY = variant<number, '@IO_BUSY'>('@IO_BUSY', DbType.int32);
 /**
  * 返回当前所使用语言的本地语言标识符(ID)。
  */
-export const LANGID = variant<number, '@LANGID'>('@LANGID');
+export const LANGID = variant<number, '@LANGID'>('@LANGID', DbType.int32);
 /**
  * 返回当前使用的语言名。
  */
-export const LANGUAGE = variant<string, '@LANGUAGE'>('@LANGUAGE');
+export const LANGUAGE = variant<string, '@LANGUAGE'>(
+  '@LANGUAGE',
+  DbType.string(DbType.MAX)
+);
 /**
  * 返回 Microsoft SQL Server上允许的同时用户连接的最大数。返回的数不必为当前配置的数值。
  */
 export const MAX_CONNECTIONS = variant<number, '@MAX_CONNECTIONS'>(
-  '@MAX_CONNECTIONS'
+  '@MAX_CONNECTIONS',
+  DbType.int32
 );
 /**
  * 返回 Microsoft SQL Server自上次启动后从网络上读取的输入数据包数目。
  */
 export const PACK_RECEIVED = variant<number, '@PACK_RECEIVED'>(
-  '@PACK_RECEIVED'
+  '@PACK_RECEIVED',
+  DbType.int32
 );
 /**
  * 返回 Microsoft SQL Server自上次启动后写到网络上的输出数据包数目。
  */
-export const PACK_SENT = variant<number, '@PACK_SENT'>('@PACK_SENT');
+export const PACK_SENT = variant<number, '@PACK_SENT'>(
+  '@PACK_SENT',
+  DbType.int32
+);
 /**
  * 返回自 SQL Server 上次启动后，在 Microsoft SQL Server连接上发生的网络数据包错误数。
  */
 export const PACKET_ERRORS = variant<number, '@PACKET_ERRORS'>(
-  '@PACKET_ERRORS'
+  '@PACKET_ERRORS',
+  DbType.int32
 );
 /**
  * 返回运行 Microsoft SQL Server的本地服务器名称。
  */
-export const SERVERNAME = variant<string, '@SERVERNAME'>('@SERVERNAME');
+export const SERVERNAME = variant<string, '@SERVERNAME'>(
+  '@SERVERNAME',
+  DbType.string(DbType.MAX)
+);
 /**
  * 返回 Microsoft SQL Server正在其下运行的注册表键名。若当前实例为默认实例，则 @SERVICENAME 返回 MSSQLServer；若当前实例是命名实例，则该函数返回实例名。
  */
-export const SERVICENAME = variant<string, '@SERVICENAME'>('@SERVICENAME');
+export const SERVICENAME = variant<string, '@SERVICENAME'>(
+  '@SERVICENAME',
+  DbType.string(DbType.MAX)
+);
 /**
  * 返回当前用户进程的服务器进程标识符 (ID)。
  */
-export const SPID = variant<number, '@SPID'>('@SPID');
+export const SPID = variant<number, '@SPID'>('@SPID', DbType.int32);
 /**
  * 返回一刻度的微秒数。
  */
-export const TIMETICKS = variant<number, '@TIMETICKS'>('@TIMETICKS');
+export const TIMETICKS = variant<number, '@TIMETICKS'>(
+  '@TIMETICKS',
+  DbType.int32
+);
 /**
  * 返回 Microsoft SQL Server自上次启动后，所遇到的磁盘读/写错误数。
  */
-export const TOTAL_ERRORS = variant<number, '@TOTAL_ERRORS'>('@TOTAL_ERRORS');
+export const TOTAL_ERRORS = variant<number, '@TOTAL_ERRORS'>(
+  '@TOTAL_ERRORS',
+  DbType.int32
+);
 /**
  * 返回 Microsoft SQL Server自上次启动后写入磁盘的次数。
  */
-export const TOTAL_WRITE = variant<number, '@TOTAL_WRITE'>('@TOTAL_WRITE');
+export const TOTAL_WRITE = variant<number, '@TOTAL_WRITE'>(
+  '@TOTAL_WRITE',
+  DbType.int32
+);
 /**
  * 返回 Microsoft SQL Server当前安装的日期、版本和处理器类型。
  */
-export const VERSION = variant<string, '@VERSION'>('@VERSION');
+export const VERSION = variant<string, '@VERSION'>(
+  '@VERSION',
+  DbType.string(DbType.MAX)
+);
 /**
  * 返回 Microsoft SQL Server自上次启动后读取磁盘（不是读取高速缓存）的次数。
  */
-export const TOTAL_READ = variant<number, '@TOTAL_READ'>('@TOTAL_READ');
+export const TOTAL_READ = variant<number, '@TOTAL_READ'>(
+  '@TOTAL_READ',
+  DbType.int32
+);
 
 /**
  * 系统变量
@@ -937,7 +975,7 @@ export const database_principal_id: (
 /**
  * 获取数据库的上级ID
  */
- export const db_id: (
+export const db_id: (
   dbName: CompatibleExpression<string>
 ) => Expression<number> = makeInvoke('scalar', 'db_id', true);
 
