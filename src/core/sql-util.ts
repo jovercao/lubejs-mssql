@@ -51,6 +51,7 @@ import {
   BINARY_OPERATION_OPERATOR,
   Variant,
   PARAMETER_DIRECTION,
+  Field,
 } from 'lubejs/core';
 import { dbTypeToRaw, rawToDbType } from './types';
 import { sqlifyLiteral } from './util';
@@ -557,9 +558,9 @@ export class MssqlSqlUtil extends SqlUtil {
   }
 
   sqlifyCreateTable(statement: CreateTable): string {
-    this.assertAst(statement.$members, 'CreateTable statement name not found.');
+    this.assertAst(statement.$body, 'CreateTable statement name not found.');
     let sql = `CREATE TABLE ${this.sqlifyObjectName(statement.$name)} (`;
-    sql += statement.$members
+    sql += statement.$body
       .map((member) => this.sqlifyTableMember(member))
       .join(',\n  ');
     sql += ')';
@@ -581,12 +582,9 @@ SET IDENTITY_INSERT ${this.sqlifyObjectName(insert.$table.$name)} OFF
 
   protected sqlifyTableVariantDeclare(declare: TableVariant<any>): string {
     this.assertAst(declare.$name, 'Table Variant declare name not found.');
-    this.assertAst(
-      declare.$members,
-      'Table Variant declare members not found.'
-    );
+    this.assertAst(declare.$body, 'Table Variant declare members not found.');
     let sql = `${this.sqlifyVariantName(declare.$name)} TABLE(`;
-    sql += declare.$members
+    sql += declare.$body
       .map((member) => this.sqlifyTableMember(member))
       .join(',\n  ');
     sql += ')';
