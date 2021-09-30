@@ -6,18 +6,19 @@ import {
   IndexSchema,
   PrimaryKeySchema,
   TableSchema,
-  UniqueConstraintSchema,
+  // UniqueConstraintSchema,
   ViewSchema,
   ProcedureSchema,
   FunctionSchema,
   SequenceSchema,
-  SchemaSchema,
-} from 'lubejs/orm/index';
-
-import { LUBE_MIGRATE_TABLE_NAME } from 'lubejs/migrate';
-
-import { SQL, DbType } from 'lubejs/core';
-
+  // SchemaSchema,
+  LUBE_MIGRATE_TABLE_NAME,
+  SchemaLoader,
+  SQL,
+  DbType,
+  CompatiableObjectName,
+  ObjectName,
+} from 'lubejs';
 import { database_principal_id } from '../core/build-in';
 import { fullType } from './util';
 import { MssqlConnection } from '../core/connection';
@@ -32,14 +33,37 @@ const {
 
 const excludeTables: string[] = [LUBE_MIGRATE_TABLE_NAME];
 
-export async function loadDatabaseSchema(
-  connection: MssqlConnection,
-  dbName?: string
-): Promise<DatabaseSchema | undefined> {
-  /**
-   * 获取 表格及视图
-   */
-  async function getTables() {
+type DatabaseObject = {
+  id: number;
+  database: string;
+  name: string;
+  schema: string;
+  comment?: string;
+};
+
+export class MssqlSchemaLoader extends SchemaLoader {
+  constructor(connection: MssqlConnection) {
+    super(connection);
+  }
+
+  private currentDatabase?: string;
+
+  private async changeDatabase(database: string): Promise<void> {
+    if (!this.currentDatabase) {
+      this.currentDatabase = await this.connection.getDatabaseName();
+    }
+    if (this.currentDatabase !== database) {
+      await this.connection.changeDatabase(database);
+      this.currentDatabase = database;
+    }
+  }
+
+  private async _getTables(
+    database: string,
+    schema?: string,
+    name?: string
+  ): Promise<DatabaseObject[]> {
+    await this.changeDatabase(database);
     const t = table({ name: 'tables', schema: 'sys' }).as('t');
     const p = table({ name: 'extended_properties', schema: 'sys' }).as('p');
     const s = table({ name: 'schemas', schema: 'sys' });
@@ -60,51 +84,75 @@ export async function loadDatabaseSchema(
           .and(p.name.eq('MS_Description'))
       )
       .where(and(t.type.eq('U'), t.name.notIn(...excludeTables)));
+    if (schema) {
+      sql.andWhere(s.name.eq(schema));
+    }
+    if (name) {
+      sql.andWhere(t.name.eq(name));
+    }
+    return (await this.connection.query(sql)).rows.map((item) =>
+      Object.assign(
+        {
+          database,
+        },
+        item
+      )
+    );
+  }
 
-    const tables: TableSchema[] = (await connection.query(sql)).rows as any;
-
+  private async _fillTables(
+    database: string,
+    tables: Partial<TableSchema>[]
+  ): Promise<TableSchema[]> {
+    await this.changeDatabase(database);
     for (const table of tables) {
       const tableId = Reflect.get(table, 'id');
       Reflect.deleteProperty(table, 'id');
-      table.columns = await getColumns(tableId);
-      table.primaryKey = await getPrimaryKey(tableId);
-      table.indexes = await getIndexes(tableId);
+      table.columns = await this._getColumns(tableId);
+      table.primaryKey = await this._getPrimaryKey(tableId);
+      table.indexes = await this._getIndexes(tableId);
       table.constraints = [
-        ...(await getCheckConstraints(tableId)),
-        ...(await getUniqueConstraints(tableId)),
+        ...(await this._getCheckConstraints(tableId)),
+        // ...(await this._getUniqueConstraints(tableId)),
       ];
-      table.foreignKeys = await getForeignKeys(tableId);
+      table.foreignKeys = await this._getForeignKeys(tableId);
     }
-    return tables;
+    return tables as TableSchema[];
   }
 
-  async function getSchemas(): Promise<SchemaSchema[]> {
-    const p = table({ name: 'extended_properties', schema: 'sys' }).as('p');
-    const s = table({ name: 'schemas', schema: 'sys' }).as('s');
-    const sql = select({
-      name: s.name,
-      comment: p.value,
-    })
-      .from(s)
-      .leftJoin(
-        p,
-        p.major_id
-          .eq(s.schema_id)
-          .and(p.class.eq(3))
-          .and(p.minor_id.eq(0))
-          .and(p.name.eq('MS_Description'))
-      )
-      .where(s.principal_id.eq(database_principal_id(dbName!)));
-    const result = (await connection.query(sql)).rows;
-    const schemas: SchemaSchema[] = result;
-    return schemas;
+  async getTableNames(
+    database: string,
+    schema?: string
+  ): Promise<Required<ObjectName>[]> {
+    return await this._getTables(database, schema);
   }
 
-  async function getViews(): Promise<ViewSchema[]> {
-    const v = table({ name: 'views', schema: 'sys' }).as('v');
-    const p = table({ name: 'extended_properties', schema: 'sys' }).as('p');
-    const s = table({ name: 'schemas', schema: 'sys' });
-    const sql = select({
+  async getTables(database: string, schema?: string): Promise<TableSchema[]> {
+    return await this._fillTables(
+      database,
+      await this._getTables(database, schema)
+    );
+  }
+
+  async getTable(
+    database: string,
+    schema: string,
+    name: string
+  ): Promise<TableSchema> {
+    const tables = await this._getTables(database, schema, name);
+    return (await this._fillTables(database, tables))[0];
+  }
+
+  private async _getViews(
+    database: string,
+    schema?: string,
+    name?: string
+  ): Promise<DatabaseObject[]> {
+    await this.changeDatabase(database);
+    const v = SQL.table({ name: 'views', schema: 'sys' }).as('v');
+    const p = SQL.table({ name: 'extended_properties', schema: 'sys' }).as('p');
+    const s = SQL.table({ name: 'schemas', schema: 'sys' });
+    const sql = SQL.select({
       id: v.object_id,
       name: v.name,
       schema: s.name,
@@ -122,129 +170,106 @@ export async function loadDatabaseSchema(
           .and(p.name.eq('MS_Description'))
       )
       .where(and(v.type.eq('U'), v.name.notIn(...excludeTables)));
-    const result = (await connection.query(sql)).rows;
-    const views: ViewSchema[] = result;
+    if (schema) {
+      sql.andWhere(s.name.eq(schema));
+    }
+    if (name) {
+      sql.andWhere(v.name.eq(name));
+    }
+    return (await this.connection.query(sql)).rows.map((v) => ({
+      database,
+      ...v,
+    }));
+  }
 
+  private async _fillViews(
+    views: Partial<ViewSchema>[]
+  ): Promise<ViewSchema[]> {
     for (const view of views) {
-      view.scripts = await getCode(view.name);
+      view.scripts = await this._getCode(view.name!);
     }
-    return views;
+    return views as ViewSchema[];
   }
 
-  async function getProcedures(): Promise<ProcedureSchema[]> {
-    const proc = table({ name: 'procedures', schema: 'sys' }).as('proc');
-    const p = table({ name: 'extended_properties', schema: 'sys' }).as('p');
-    const s = table({ name: 'schemas', schema: 'sys' });
-    const sql = select({
-      id: proc.object_id,
-      name: proc.name,
-      schema: s.name,
-      scripts: '',
-      comment: p.value,
-    })
-      .from(proc)
-      .join(s, s.schema_id.eq(proc.schema_id))
-      .leftJoin(
-        p,
-        p.major_id
-          .eq(proc.object_id)
-          .and(p.minor_id.eq(0))
-          .and(p.class.eq(1))
-          .and(p.name.eq('MS_Description'))
-      )
-      .where(and(proc.type.eq('U'), proc.name.notIn(...excludeTables)));
-    const result = (await connection.query(sql)).rows;
-    const procedures: ProcedureSchema[] = result;
+  async getViewNames(
+    database: string,
+    schema: string
+  ): Promise<Required<ObjectName>[]> {
+    return await this._getViews(database, schema);
+  }
 
-    for (const procedure of procedures) {
-      procedure.scripts = await getCode(procedure.name);
+  async getViews(database: string, schema?: string): Promise<ViewSchema[]> {
+    const views = await this._getViews(database, schema);
+    return await this._fillViews(views);
+  }
+
+  async getView(
+    database: string,
+    schema: string,
+    name: string
+  ): Promise<ViewSchema> {
+    const views = await this._getViews(database, schema, name);
+    return (await this._fillViews(views))[0];
+  }
+
+  private async _getCheckConstraints(
+    tableId: number,
+    name?: string
+  ): Promise<CheckConstraintSchema[]> {
+    const c = table({ name: 'check_constraints', schema: 'sys' }).as('c');
+    const p = table({ name: 'extended_properties', schema: 'sys' }).as('p');
+    const sql = select<CheckConstraintSchema>({
+      kind: 'CHECK',
+      name: c.name,
+      comment: p.value,
+      sql: c.definition,
+    })
+      .from(c)
+      .join(
+        p,
+        and(
+          p.class_desc.eq('OBJECT_OR_COLUMN'),
+          p.major_id.eq(c.object_id),
+          p.minor_id.eq(0)
+        )
+      )
+      .where(
+        and(c.parent_object_id.eq(tableId), c.type_desc.eq('CHECK_CONSTRAINT'))
+      );
+    if (name) {
+      sql.andWhere(c.name.eq(name));
     }
-    return procedures;
+    const { rows } = await this.connection.query(sql);
+    return rows;
   }
 
-  async function getCode(objname: string): Promise<string> {
-    const rows = (
-      await connection.execute<number, [{ Text: string }]>('sp_helptext', [
-        objname,
-      ])
-    ).rows;
-    const key = Object.keys(rows[0])[0];
-    const code = rows.map((row) => Reflect.get(row, key)).join('\n');
-    return code;
+  async getCheckConstraints(
+    database: string,
+    schema: string,
+    table: string
+  ): Promise<CheckConstraintSchema[]> {
+    const tbs = await this._getTables(database, schema, table);
+    if (tbs.length === 0) throw new Error(`Table ${table} not found.`);
+    return await this._getCheckConstraints(tbs[0].id);
   }
 
-  async function getFunctions(): Promise<FunctionSchema[]> {
-    const fn = table({ name: 'objects', schema: 'sys' }).as('fn');
-    const p = table({ name: 'extended_properties', schema: 'sys' }).as('p');
-    const s = table({ name: 'schemas', schema: 'sys' });
-    const sql = select({
-      id: fn.object_id,
-      name: fn.name,
-      schema: s.name,
-      scripts: '',
-      comment: p.value,
-    })
-      .from(fn)
-      .join(s, s.schema_id.eq(fn.schema_id))
-      .leftJoin(
-        p,
-        p.major_id
-          .eq(fn.object_id)
-          .and(p.minor_id.eq(0))
-          .and(p.class.eq(1))
-          .and(p.name.eq('MS_Description'))
-      )
-      .where(and(fn.type.eq('U'), fn.type.eq('FN')));
-    const result = (await connection.query(sql)).rows;
-    const functions: FunctionSchema[] = result;
-
-    for (const funciton of functions) {
-      funciton.scripts = await getCode(funciton.name);
-    }
-    return functions;
+  async getCheckConstraint(
+    database: string,
+    schema: string,
+    table: string,
+    constraint: string
+  ): Promise<CheckConstraintSchema> {
+    const tbs = await this._getTables(database, schema, table);
+    if (tbs.length === 0) throw new Error(`Table ${table} not found.`);
+    const result = (await this._getCheckConstraints(tbs[0].id, constraint))[0];
+    if (!result) throw new Error(`CheckConstraint ${constraint} not found.`);
+    return result;
   }
 
-  async function getSequences(): Promise<SequenceSchema[]> {
-    const seq = table({ name: 'sequences', schema: 'sys' }).as('fn');
-    const p = table({ name: 'extended_properties', schema: 'sys' }).as('p');
-    const s = table({ name: 'schemas', schema: 'sys' });
-    const t = table({ name: 'types', schema: 'sys' }).as('t');
-    const sql = select({
-      id: seq.object_id,
-      name: seq.name,
-      type_name: t.name,
-      type_precision: seq.precision,
-      type_scale: seq.scale,
-      startValue: seq.start_value,
-      increment: seq.increment,
-      schema: s.name,
-      scripts: '',
-      comment: p.value,
-    })
-      .from(seq)
-      .join(t, seq.user_type_id.eq(t.user_type_id))
-      .join(s, s.schema_id.eq(seq.schema_id))
-      .leftJoin(
-        p,
-        p.major_id
-          .eq(seq.object_id)
-          .and(p.minor_id.eq(0))
-          .and(p.class.eq(1))
-          .and(p.name.eq('MS_Description'))
-      )
-      .where(seq.type.eq('FN'));
-    const result = (await connection.query(sql)).rows;
-    const functions: SequenceSchema[] = result.map((row) => {
-      const { type_name, type_precision, type_scale, ...datas } = row;
-      return {
-        ...datas,
-        type: fullType(type_name, 0, type_precision, type_scale),
-      };
-    });
-    return functions;
-  }
-
-  async function getColumns(tableId: number): Promise<ColumnSchema[]> {
+  private async _getColumns(
+    tableId: number,
+    name?: string
+  ): Promise<ColumnSchema[]> {
     const c = table({ name: 'columns', schema: 'sys' }).as('c');
     const t = table({ name: 'types', schema: 'sys' }).as('t');
     const p = table({ name: 'extended_properties', schema: 'sys' }).as('p');
@@ -292,7 +317,10 @@ export async function loadDatabaseSchema(
         )
       )
       .where(c.object_id.eq(tableId));
-    const { rows } = await connection.query(sql);
+    if (name) {
+      sql.andWhere(c.name.eq(name));
+    }
+    const { rows } = await this.connection.query(sql);
 
     const columns: ColumnSchema[] = [];
     for (const row of rows) {
@@ -310,7 +338,7 @@ export async function loadDatabaseSchema(
       const column: ColumnSchema = {
         // 统一行标记类型
         type: isRowflag
-          ? connection.sqlUtil.sqlifyType(DbType.rowflag)
+          ? this.connection.sqlUtil.sqlifyType(DbType.rowflag)
           : fullType(type_name, type_length, type_precision, type_scale),
         isRowflag,
         defaultValue: defaultValue
@@ -323,202 +351,35 @@ export async function loadDatabaseSchema(
     return columns;
   }
 
-  async function getPrimaryKey(tableId: number): Promise<PrimaryKeySchema> {
-    const k = table({ name: 'key_constraints', schema: 'sys' }).as('k');
-    const i = table({ name: 'indexes', schema: 'sys' }).as('i');
-    const p = table({ name: 'extended_properties', schema: 'sys' }).as('p');
+  async getColumns(
+    database: string,
+    schema: string,
+    table: string
+  ): Promise<ColumnSchema[]> {
+    const tbs = await this._getTables(database, schema, table);
+    if (tbs.length === 0) throw new Error(`Table ${table} not found.`);
+    return await this._getColumns(tbs[0].id);
+  }
 
-    const sql = select<PrimaryKeySchema>({
-      name: k.name,
-      isNonclustered: convert(
-        $case(i.type).when(1, false).else(true),
-        DbType.boolean
-      ),
-      comment: p.value,
-    })
-      .from(i)
-      .join(k, and(i.object_id.eq(k.parent_object_id), k.type.eq('PK')))
-      .leftJoin(
-        p,
-        and(p.class.eq(1), p.major_id.eq(k.object_id), p.minor_id.eq(0))
-      )
-      .where(and(i.object_id.eq(tableId), i.is_primary_key.eq(true)));
-    const rows = (await connection.query(sql)).rows;
-    const pk: PrimaryKeySchema = rows[0];
-
-    if (pk) {
-      const ic = table({ name: 'index_columns', schema: 'sys' }).as('ic');
-      // const ik = table('sysindexkeys').as('ik')
-      const c = table({ name: 'columns', schema: 'sys' }).as('c');
-
-      const colSql = select({
-        name: c.name,
-        isDesc: ic.is_descending_key,
-      })
-        .from(ic)
-        .join(
-          c,
-          and(ic.object_id.eq(c.object_id), ic.column_id.eq(c.column_id))
-        )
-        .join(i, and(ic.object_id.eq(i.object_id), ic.index_id.eq(i.index_id)))
-        .where(and(i.object_id.eq(tableId), i.is_primary_key.eq(true)));
-
-      const { rows: colRows } = await connection.query(colSql);
-      pk.columns = colRows.map((p) => ({
-        name: p.name,
-        isAscending: !p.isDesc,
-      }));
+  async getColumn(
+    database: string,
+    schema: string,
+    table: string,
+    column: string
+  ): Promise<ColumnSchema> {
+    const tbs = await this._getTables(database, schema, table);
+    if (tbs.length === 0) throw new Error(`Table ${table} not found.`);
+    const result = (await this._getColumns(tbs[0].id, column))[0];
+    if (!result) {
+      throw new Error(`Column ${column} not found.`);
     }
-    return pk;
+    return result;
   }
 
-  async function getForeignKeys(tableId: number): Promise<ForeignKeySchema[]> {
-    const fk = table({ name: 'foreign_keys', schema: 'sys' }).as('fk');
-    const rt = table({ name: 'tables', schema: 'sys' }).as('rt');
-    const d = table({ name: 'extended_properties', schema: 'sys' }).as('d');
-    const s = table({ name: 'schemas', schema: 'sys' }).as('s');
-
-    const sql = select({
-      id: fk.object_id,
-      name: fk.name,
-      isCascade: fk.delete_referential_action.to(DbType.boolean),
-      referenceTable: rt.name,
-      referenceSchema: s.name,
-      comment: d.value,
-    })
-      .from(fk)
-      .join(rt, rt.object_id.eq(fk.referenced_object_id))
-      .leftJoin(s, rt.schema_id.eq(s.schema_id))
-      .leftJoin(
-        d,
-        d.name
-          .eq('MS_Description')
-          .and(d.major_id.eq(fk.object_id))
-          .and(d.minor_id.eq(0))
-      )
-      .where(fk.parent_object_id.eq(tableId));
-    const foreignKeys: ForeignKeySchema[] = (await connection.query(sql))
-      .rows as any;
-
-    for (const foreignKey of foreignKeys) {
-      const foreignKeyId = Reflect.get(foreignKey, 'id');
-      Reflect.deleteProperty(foreignKey, 'id');
-      const fkc = table({ name: 'foreign_key_columns', schema: 'sys' }).as(
-        'fkc'
-      );
-      const fc = table({ name: 'columns', schema: 'sys' }).as('fc');
-      const rc = table({ name: 'columns', schema: 'sys' }).as('rc');
-
-      const colSql = select({
-        fcolumn: fc.name,
-        rcolumn: rc.name,
-      })
-        .from(fkc)
-        .join(
-          fc,
-          fc.object_id
-            .eq(fkc.parent_object_id)
-            .and(fc.column_id.eq(fkc.parent_column_id))
-        )
-        .join(
-          rc,
-          rc.object_id
-            .eq(fkc.referenced_object_id)
-            .and(rc.column_id.eq(fkc.referenced_column_id))
-        )
-        .where(fkc.constraint_object_id.eq(foreignKeyId));
-      const rows = (await connection.query(colSql)).rows!;
-      foreignKey.columns = rows.map((p) => p.fcolumn);
-      foreignKey.referenceColumns = rows.map((p) => p.rcolumn);
-    }
-    return foreignKeys;
-  }
-
-  async function getUniqueConstraints(
-    tableId: number
-  ): Promise<UniqueConstraintSchema[]> {
-    const i = table({ name: 'indexes', schema: 'sys' }).as('i');
-    const p = table({ name: 'extended_properties', schema: 'sys' }).as('p');
-    const k = table({ name: 'key_constraints', schema: 'sys' }).as('k');
-
-    const sql = select({
-      name: k.name,
-      indexName: i.name,
-      comment: p.value,
-    })
-      .from(i)
-      .join(
-        k,
-        and(
-          i.object_id.eq(k.parent_object_id),
-          k.unique_index_id.eq(i.index_id)
-        )
-      )
-      .leftJoin(
-        p,
-        and(p.class.eq(1), p.major_id.eq(k.object_id), p.minor_id.eq(0))
-      )
-      .where(and(i.is_unique.eq(false), i.object_id.eq(tableId)));
-    const { rows } = await connection.query(sql);
-    const uniques: UniqueConstraintSchema[] = rows.map((p) => ({
-      kind: 'UNIQUE',
-      name: p.name,
-      indexName: p.indexName,
-      comment: p.comment,
-      columns: [],
-    }));
-    const ic = table({ name: 'index_columns', schema: 'sys' }).as('ic');
-    // const ik = table('sysindexkeys').as('ik')
-    const c = table({ name: 'columns', schema: 'sys' }).as('c');
-
-    const colSql = select({
-      indexName: i.name,
-      name: c.name,
-      isDesc: ic.is_descending_key,
-    })
-      .from(ic)
-      .join(c, and(ic.object_id.eq(c.object_id), ic.column_id.eq(c.column_id)))
-      .join(i, and(ic.object_id.eq(i.object_id), ic.index_id.eq(i.index_id)))
-      .where(and(i.is_unique.eq(false), i.object_id.eq(tableId)));
-
-    const { rows: colRows } = await connection.query(colSql);
-    for (const unique of uniques) {
-      unique.columns = colRows
-        .filter((p) => p.indexName === Reflect.get(unique, 'indexName'))
-        .map((p) => ({ name: p.name, isAscending: !p.isDesc }));
-      Reflect.deleteProperty(unique, 'indexName');
-    }
-    return uniques;
-  }
-
-  async function getCheckConstraints(
-    tableId: number
-  ): Promise<CheckConstraintSchema[]> {
-    const c = table({ name: 'check_constraints', schema: 'sys' }).as('c');
-    const p = table({ name: 'extended_properties', schema: 'sys' }).as('p');
-    const sql = select<CheckConstraintSchema>({
-      kind: 'CHECK',
-      name: c.name,
-      comment: p.value,
-      sql: c.definition,
-    })
-      .from(c)
-      .join(
-        p,
-        and(
-          p.class_desc.eq('OBJECT_OR_COLUMN'),
-          p.major_id.eq(c.object_id),
-          p.minor_id.eq(0)
-        )
-      )
-      .where(
-        and(c.parent_object_id.eq(tableId), c.type_desc.eq('CHECK_CONSTRAINT'))
-      );
-    const { rows } = await connection.query(sql);
-    return rows;
-  }
-
-  async function getIndexes(tableId: number): Promise<IndexSchema[]> {
+  private async _getIndexes(
+    tableId: number,
+    name?: string
+  ): Promise<IndexSchema[]> {
     const i = table({ name: 'indexes', schema: 'sys' }).as('i');
     const p = table({ name: 'extended_properties', schema: 'sys' }).as('p');
 
@@ -548,8 +409,11 @@ export async function loadDatabaseSchema(
           i.type.in(1, 2)
         )
       );
-    // const st = provider.sqlUtil.sqlify(sql);
-    const { rows } = await connection.query(sql);
+    if (name) {
+      sql.andWhere(i.name.eq(name));
+    }
+
+    const { rows } = await this.connection.query(sql);
     const indexes: IndexSchema[] = rows.map(
       ({ name, isUnique, isClustered, comment }) =>
         ({
@@ -579,7 +443,7 @@ export async function loadDatabaseSchema(
           i.is_unique_constraint.eq(false)
         )
       );
-    const { rows: colRows } = await connection.query(colSql);
+    const { rows: colRows } = await this.connection.query(colSql);
     for (const index of indexes) {
       index.columns = colRows
         .filter((p) => p.indexName === index.name)
@@ -588,42 +452,392 @@ export async function loadDatabaseSchema(
     return indexes;
   }
 
-  const connectionDbName = await connection.getDatabaseName();
-  if (!dbName) {
-    dbName = connectionDbName;
+  async getIndexes(
+    database: string,
+    schema: string,
+    table: string
+  ): Promise<IndexSchema[]> {
+    const tbs = await this._getTables(database, schema, table);
+    if (tbs.length === 0) throw new Error(`Table ${table} not found.`);
+    return await this._getIndexes(tbs[0].id);
+  }
+  async getIndex(
+    database: string,
+    schema: string,
+    table: string,
+    index: string
+  ): Promise<IndexSchema> {
+    const tbs = await this._getTables(database, schema, table);
+    if (tbs.length === 0) throw new Error(`Table ${table} not found.`);
+    const result = (await this._getIndexes(tbs[0].id, index))[0];
+    if (!result) {
+      throw new Error(`Index ${index} not found.`);
+    }
+    return result;
+  }
+  private async _getForeignKeys(
+    tableId?: number,
+    refTableId?: number,
+    name?: string
+  ): Promise<ForeignKeySchema[]> {
+    const fk = table({ name: 'foreign_keys', schema: 'sys' }).as('fk');
+    const rt = table({ name: 'tables', schema: 'sys' }).as('rt');
+    const d = table({ name: 'extended_properties', schema: 'sys' }).as('d');
+    const s = table({ name: 'schemas', schema: 'sys' }).as('s');
+
+    const sql = select({
+      id: fk.object_id,
+      name: fk.name,
+      isCascade: fk.delete_referential_action.to(DbType.boolean),
+      referenceTable: rt.name,
+      referenceSchema: s.name,
+      comment: d.value,
+    })
+      .from(fk)
+      .join(rt, rt.object_id.eq(fk.referenced_object_id))
+      .leftJoin(s, rt.schema_id.eq(s.schema_id))
+      .leftJoin(
+        d,
+        d.name
+          .eq('MS_Description')
+          .and(d.major_id.eq(fk.object_id))
+          .and(d.minor_id.eq(0))
+      );
+    if (tableId !== undefined) {
+      sql.andWhere(fk.parent_object_id.eq(tableId));
+    }
+    if (refTableId !== undefined) {
+      sql.andWhere(rt.object_id.eq(refTableId));
+    }
+    if (name) {
+      sql.andWhere(fk.name.eq(name));
+    }
+    const foreignKeys: ForeignKeySchema[] = (await this.connection.query(sql))
+      .rows as any;
+
+    for (const foreignKey of foreignKeys) {
+      const foreignKeyId = Reflect.get(foreignKey, 'id');
+      Reflect.deleteProperty(foreignKey, 'id');
+      const fkc = table({ name: 'foreign_key_columns', schema: 'sys' }).as(
+        'fkc'
+      );
+      const fc = table({ name: 'columns', schema: 'sys' }).as('fc');
+      const rc = table({ name: 'columns', schema: 'sys' }).as('rc');
+
+      const colSql = select({
+        fcolumn: fc.name,
+        rcolumn: rc.name,
+      })
+        .from(fkc)
+        .join(
+          fc,
+          fc.object_id
+            .eq(fkc.parent_object_id)
+            .and(fc.column_id.eq(fkc.parent_column_id))
+        )
+        .join(
+          rc,
+          rc.object_id
+            .eq(fkc.referenced_object_id)
+            .and(rc.column_id.eq(fkc.referenced_column_id))
+        )
+        .where(fkc.constraint_object_id.eq(foreignKeyId));
+      const rows = (await this.connection.query(colSql)).rows!;
+      foreignKey.columns = rows.map((p) => p.fcolumn);
+      foreignKey.referenceColumns = rows.map((p) => p.rcolumn);
+    }
+    return foreignKeys;
   }
 
-  const d = table('sys.databases');
-  const sql = select({
-    name: d.name,
-    collate: d.collation_name,
-    comment: 'mssql not all comment to database.',
-  })
-    .from(d)
-    .where(d.name.eq(dbName));
-  const {
-    rows: [row],
-  } = await connection.query(sql);
-  if (!row) {
-    return;
+  async getForeignKeys(
+    database: string,
+    schema: string,
+    table: string
+  ): Promise<ForeignKeySchema[]> {
+    const tbs = await this._getTables(database, schema, table);
+    if (tbs.length === 0) throw new Error(`Table ${table} not found.`);
+    return await this._getForeignKeys(tbs[0].id);
   }
 
-  return await connection.trans(async () => {
-    // 切换数据库
-    if (dbName !== connectionDbName) {
-      // 由于数据连接池的原因，极有可能产生一个巨坑，后续任务使用到该连接时，导致数据库与连接字符串不对的错误。
-      // 因此在执行完成后，切换回原数据库
-      await connection.query(SQL.use(dbName!));
+  async getForeignKey(
+    database: string,
+    schema: string,
+    table: string,
+    fk: string
+  ): Promise<ForeignKeySchema> {
+    const tbs = await this._getTables(database, schema, table);
+    if (tbs.length === 0) throw new Error(`Table ${table} not found.`);
+    const result = (await this._getForeignKeys(tbs[0].id, undefined, fk))[0];
+    if (!result) {
+      throw new Error(`ForeignKey ${fk} not found.`);
     }
-    const tables = await getTables();
-    const views = await getViews();
-    const procedures = await getProcedures();
-    const functions = await getFunctions();
-    const sequences = await getSequences();
-    const schemas = await getSchemas();
-    if (dbName !== connectionDbName) {
-      await connection.query(SQL.use(connectionDbName));
+    return result;
+  }
+
+  async getReferenceKeys(
+    database: string,
+    schema: string,
+    table: string
+  ): Promise<ForeignKeySchema[]> {
+    const tbs = await this._getTables(database, schema, table);
+    if (tbs.length === 0) throw new Error(`Table ${table} not found.`);
+    return await this._getForeignKeys(undefined, tbs[0].id);
+  }
+
+  private async _getPrimaryKey(tableId: number): Promise<PrimaryKeySchema> {
+    const k = table({ name: 'key_constraints', schema: 'sys' }).as('k');
+    const i = table({ name: 'indexes', schema: 'sys' }).as('i');
+    const p = table({ name: 'extended_properties', schema: 'sys' }).as('p');
+
+    const sql = select<PrimaryKeySchema>({
+      name: k.name,
+      isNonclustered: convert(
+        $case(i.type).when(1, false).else(true),
+        DbType.boolean
+      ),
+      comment: p.value,
+    })
+      .from(i)
+      .join(k, and(i.object_id.eq(k.parent_object_id), k.type.eq('PK')))
+      .leftJoin(
+        p,
+        and(p.class.eq(1), p.major_id.eq(k.object_id), p.minor_id.eq(0))
+      )
+      .where(and(i.object_id.eq(tableId), i.is_primary_key.eq(true)));
+    const rows = (await this.connection.query(sql)).rows;
+    const pk: PrimaryKeySchema = rows[0];
+
+    if (pk) {
+      const ic = table({ name: 'index_columns', schema: 'sys' }).as('ic');
+      // const ik = table('sysindexkeys').as('ik')
+      const c = table({ name: 'columns', schema: 'sys' }).as('c');
+
+      const colSql = select({
+        name: c.name,
+        isDesc: ic.is_descending_key,
+      })
+        .from(ic)
+        .join(
+          c,
+          and(ic.object_id.eq(c.object_id), ic.column_id.eq(c.column_id))
+        )
+        .join(i, and(ic.object_id.eq(i.object_id), ic.index_id.eq(i.index_id)))
+        .where(and(i.object_id.eq(tableId), i.is_primary_key.eq(true)));
+
+      const { rows: colRows } = await this.connection.query(colSql);
+      pk.columns = colRows.map((p) => ({
+        name: p.name,
+        isAscending: !p.isDesc,
+      }));
     }
+    return pk;
+  }
+
+  async getPrimaryKey(
+    database: string,
+    schema: string,
+    table: string
+  ): Promise<PrimaryKeySchema> {
+    const tbs = await this._getTables(database, schema, table);
+    if (tbs.length === 0) throw new Error(`Table ${table} not found.`);
+    return this._getPrimaryKey(tbs[0].id);
+  }
+
+  async getSchemaNames(database: string): Promise<string[]> {
+    const p = table({ name: 'extended_properties', schema: 'sys' }).as('p');
+    const s = table({ name: 'schemas', schema: 'sys' }).as('s');
+    const sql = select({
+      name: s.name,
+      comment: p.value,
+    })
+      .from(s)
+      .leftJoin(
+        p,
+        p.major_id
+          .eq(s.schema_id)
+          .and(p.class.eq(3))
+          .and(p.minor_id.eq(0))
+          .and(p.name.eq('MS_Description'))
+      )
+      .where(s.principal_id.eq(database_principal_id(database)));
+    const result = (await this.connection.query(sql)).rows;
+    // const schemas: SchemaSchema[] = result;
+    return result.map((schema) => schema.name);
+  }
+  getDatabaseNames(): Promise<string[]> {
+    throw new Error('Method not implemented.');
+  }
+  private async _getFunctions(
+    database: string,
+    schema?: string,
+    name?: string
+  ): Promise<DatabaseObject[]> {
+    await this.changeDatabase(database);
+    const fn = table({ name: 'objects', schema: 'sys' }).as('fn');
+    const p = table({ name: 'extended_properties', schema: 'sys' }).as('p');
+    const s = table({ name: 'schemas', schema: 'sys' });
+    const sql = select({
+      id: fn.object_id,
+      name: fn.name,
+      schema: s.name,
+      comment: p.value,
+    })
+      .from(fn)
+      .join(s, s.schema_id.eq(fn.schema_id))
+      .leftJoin(
+        p,
+        p.major_id
+          .eq(fn.object_id)
+          .and(p.minor_id.eq(0))
+          .and(p.class.eq(1))
+          .and(p.name.eq('MS_Description'))
+      )
+      .where(and(fn.type.eq('U'), fn.type.eq('FN')));
+    if (schema) {
+      sql.andWhere(s.name.eq(schema));
+    }
+    if (name) {
+      sql.andWhere(fn.name.eq(name));
+    }
+    return (await this.connection.query(sql)).rows.map((f) => ({
+      database,
+      ...f,
+    }));
+  }
+
+  private async _fillFunctions(
+    functions: Partial<FunctionSchema>[]
+  ): Promise<FunctionSchema[]> {
+    for (const f of functions) {
+      f.scripts = await this._getCode(f.name!);
+    }
+    return functions as FunctionSchema[];
+  }
+
+  async getFunctionNames(
+    database: string,
+    schema?: string
+  ): Promise<Required<ObjectName>[]> {
+    return this._getFunctions(database, schema);
+  }
+
+  async getFunctions(
+    database: string,
+    schema?: string
+  ): Promise<FunctionSchema[]> {
+    const functions = await this._getFunctions(database, schema);
+    return await this._fillFunctions(functions);
+  }
+
+  async getFunctionSchema(
+    database: string,
+    schema: string,
+    fn: string
+  ): Promise<FunctionSchema> {
+    const functions = await this._getFunctions(database, schema, fn);
+    if (functions.length === 0) {
+      throw new Error(`Function ${fn} not found.`);
+    }
+    return (await this._fillFunctions(functions))[0];
+  }
+  private async _getProcedures(
+    database: string,
+    schema?: string,
+    name?: string
+  ): Promise<DatabaseObject[]> {
+    await this.changeDatabase(database);
+    const proc = table({ name: 'procedures', schema: 'sys' }).as('proc');
+    const p = table({ name: 'extended_properties', schema: 'sys' }).as('p');
+    const s = table({ name: 'schemas', schema: 'sys' });
+    const sql = select({
+      id: proc.object_id,
+      name: proc.name,
+      schema: s.name,
+      comment: p.value,
+    })
+      .from(proc)
+      .join(s, s.schema_id.eq(proc.schema_id))
+      .leftJoin(
+        p,
+        p.major_id
+          .eq(proc.object_id)
+          .and(p.minor_id.eq(0))
+          .and(p.class.eq(1))
+          .and(p.name.eq('MS_Description'))
+      )
+      .where(and(proc.type.eq('U'), proc.name.notIn(...excludeTables)));
+    if (schema) {
+      sql.andWhere(s.name.eq(schema));
+    }
+    if (name) {
+      sql.andWhere(proc.name.eq(name));
+    }
+    return (await this.connection.query(sql)).rows.map((p) => ({
+      database,
+      ...p,
+    }));
+  }
+
+  private async _fillProcedure(
+    proces: Partial<ProcedureSchema>[]
+  ): Promise<ProcedureSchema[]> {
+    for (const procedure of proces) {
+      procedure.scripts = await this._getCode(procedure.name!);
+    }
+    return proces as ProcedureSchema[];
+  }
+
+  getProcedureNames(
+    database: string,
+    schema?: string
+  ): Promise<Required<ObjectName>[]> {
+    return this._getProcedures(database, schema);
+  }
+
+  async getProcedures(
+    database: string,
+    schema?: string
+  ): Promise<ProcedureSchema[]> {
+    const proces = await this._getProcedures(database, schema);
+    return await this._fillProcedure(proces);
+  }
+
+  async getProcedure(
+    database: string,
+    schema: string,
+    proc: string
+  ): Promise<ProcedureSchema> {
+    const procedures = await this._getProcedures(database, schema, proc);
+    if (procedures.length === 0) {
+      throw new Error(`Procedure ${proc} not found.`);
+    }
+    return (await this._fillProcedure(procedures))[0];
+  }
+
+  async getDatabaseSchema(name: string): Promise<DatabaseSchema> {
+    await this.changeDatabase(name);
+    const d = table('sys.databases');
+    const sql = select({
+      name: d.name,
+      collate: d.collation_name,
+      comment: 'mssql not all comment to database.',
+    })
+      .from(d)
+      .where(d.name.eq(name));
+    const {
+      rows: [row],
+    } = await this.connection.query(sql);
+    if (!row) {
+      throw new Error(`Database ${name} not found.`);
+    }
+
+    const tables = await this.getTables(name);
+    const views = await this.getViews(name);
+    const procedures = await this.getProcedures(name);
+    const functions = await this.getFunctions(name);
+    const sequences = await this.getSequences(name);
+    const schemas = await this.getSchemaNames(name);
+
     return {
       ...row,
       tables,
@@ -633,5 +847,130 @@ export async function loadDatabaseSchema(
       sequences,
       schemas,
     } as DatabaseSchema;
-  });
+  }
+
+  private async _getSequences(
+    database: string,
+    schema?: string,
+    name?: string
+  ): Promise<SequenceSchema[]> {
+    await this.changeDatabase(database);
+    const seq = table({ name: 'sequences', schema: 'sys' }).as('fn');
+    const p = table({ name: 'extended_properties', schema: 'sys' }).as('p');
+    const s = table({ name: 'schemas', schema: 'sys' });
+    const t = table({ name: 'types', schema: 'sys' }).as('t');
+    const sql = select({
+      id: seq.object_id,
+      name: seq.name,
+      type_name: t.name,
+      type_precision: seq.precision,
+      type_scale: seq.scale,
+      startValue: seq.start_value,
+      increment: seq.increment,
+      schema: s.name,
+      scripts: '',
+      comment: p.value,
+    })
+      .from(seq)
+      .join(t, seq.user_type_id.eq(t.user_type_id))
+      .join(s, s.schema_id.eq(seq.schema_id))
+      .leftJoin(
+        p,
+        p.major_id
+          .eq(seq.object_id)
+          .and(p.minor_id.eq(0))
+          .and(p.class.eq(1))
+          .and(p.name.eq('MS_Description'))
+      )
+      .where(seq.type.eq('FN'));
+    if (schema) sql.andWhere(s.name.eq(schema));
+    if (name) sql.andWhere(seq.name.eq(name));
+    const result = (await this.connection.query(sql)).rows;
+    const functions: SequenceSchema[] = result.map((row) => {
+      const { type_name, type_precision, type_scale, ...datas } = row;
+      return {
+        ...datas,
+        type: fullType(type_name, 0, type_precision, type_scale),
+      };
+    });
+    return functions;
+  }
+
+  getSequences(database: string, schema?: string): Promise<SequenceSchema[]> {
+    return this._getSequences(database, schema);
+  }
+  async getSequence(
+    database: string,
+    schema: string,
+    name: string
+  ): Promise<SequenceSchema> {
+    const seqs = await this._getSequences(database, schema, name);
+    if (seqs.length === 0) throw new Error(`Sequence ${name} not found.`);
+    return seqs[0];
+  }
+
+  private async _getCode(objname: string): Promise<string> {
+    const rows = (
+      await this.connection.execute<number, [{ Text: string }]>('sp_helptext', [
+        objname,
+      ])
+    ).rows;
+    const key = Object.keys(rows[0])[0];
+    const code = rows.map((row) => Reflect.get(row, key)).join('\n');
+    return code;
+  }
 }
+
+// async function getUniqueConstraints(
+//   tableId: number
+// ): Promise<UniqueConstraintSchema[]> {
+//   const i = table({ name: 'indexes', schema: 'sys' }).as('i');
+//   const p = table({ name: 'extended_properties', schema: 'sys' }).as('p');
+//   const k = table({ name: 'key_constraints', schema: 'sys' }).as('k');
+
+//   const sql = select({
+//     name: k.name,
+//     indexName: i.name,
+//     comment: p.value,
+//   })
+//     .from(i)
+//     .join(
+//       k,
+//       and(i.object_id.eq(k.parent_object_id), k.unique_index_id.eq(i.index_id))
+//     )
+//     .leftJoin(
+//       p,
+//       and(p.class.eq(1), p.major_id.eq(k.object_id), p.minor_id.eq(0))
+//     )
+//     .where(and(i.is_unique.eq(false), i.object_id.eq(tableId)));
+//   const { rows } = await connection.query(sql);
+//   const uniques: UniqueConstraintSchema[] = rows.map((p) => ({
+//     kind: 'UNIQUE',
+//     name: p.name,
+//     indexName: p.indexName,
+//     comment: p.comment,
+//     columns: [],
+//   }));
+//   const ic = table({ name: 'index_columns', schema: 'sys' }).as('ic');
+//   // const ik = table('sysindexkeys').as('ik')
+//   const c = table({ name: 'columns', schema: 'sys' }).as('c');
+
+//   const colSql = select({
+//     indexName: i.name,
+//     name: c.name,
+//     isDesc: ic.is_descending_key,
+//   })
+//     .from(ic)
+//     .join(c, and(ic.object_id.eq(c.object_id), ic.column_id.eq(c.column_id)))
+//     .join(i, and(ic.object_id.eq(i.object_id), ic.index_id.eq(i.index_id)))
+//     .where(and(i.is_unique.eq(false), i.object_id.eq(tableId)));
+
+//   const { rows: colRows } = await connection.query(colSql);
+//   for (const unique of uniques) {
+//     unique.columns = colRows
+//       .filter((p) => p.indexName === Reflect.get(unique, 'indexName'))
+//       .map((p) => ({ name: p.name, isAscending: !p.isDesc }));
+//     Reflect.deleteProperty(unique, 'indexName');
+//   }
+//   return uniques;
+// }

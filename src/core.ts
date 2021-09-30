@@ -17,6 +17,8 @@ export const driver: DbProviderFactory = function (): DbProvider {
   return new MssqlDbProvider();
 };
 
+driver.dialect = DIALECT;
+
 export default driver;
 
 register(DIALECT, driver);

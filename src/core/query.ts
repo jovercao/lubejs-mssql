@@ -76,7 +76,7 @@ mssql.map.register(Uuid, mssql.UniqueIdentifier);
  */
 function normalDatas(datas: mssql.IRecordSet<any>): any[] {
   for (const [column, { type }] of Object.entries(datas.columns)) {
-    // HACK 使用mssql私有属性 SqlType declaration
+    // HACK 此处使用mssql私有属性 SqlType declaration，将来mssql库更新可能会导致问题
     const declare = Reflect.get(type, 'declaration')?.toLowerCase?.();
     if (!declare) {
       throw new Error(`Declare`);

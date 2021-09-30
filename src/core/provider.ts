@@ -4,8 +4,7 @@ import { MssqlSqlOptions, MssqlSqlUtil } from './sql-util';
 import { MssqlStandardTranslator } from './standard-translator';
 import { MssqlConnectOptions } from './connection';
 
-
-export const DIALECT = 'mssql'
+export const DIALECT = 'mssql';
 
 export class MssqlDbProvider implements DbProvider {
   constructor(sqlOptions?: MssqlSqlOptions) {
@@ -13,7 +12,9 @@ export class MssqlDbProvider implements DbProvider {
     this.stdTranslator = new MssqlStandardTranslator(this);
   }
   getMigrateBuilder(): any {
-    throw new Error('This is a orm use kind, Pls import the full node module `lubejs-mssql`.');
+    throw new Error(
+      'This is a orm use kind, Pls import the full node module `lubejs-mssql`.'
+    );
   }
 
   readonly sqlUtil: MssqlSqlUtil;
@@ -24,6 +25,12 @@ export class MssqlDbProvider implements DbProvider {
    */
   getConnection(options: MssqlConnectOptions): Connection {
     return new MssqlConnection(this, options);
+  }
+
+  getSchemaLoader(connection: MssqlConnection): any {
+    throw new Error(
+      `SchemaLoader is the functional by full pack, pls use 'import 'lubejs' if want to use it.`
+    );
   }
 
   readonly dialect: string = DIALECT;
