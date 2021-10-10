@@ -1,4 +1,4 @@
-import { dbTypeToRaw } from './types';
+import { sqlifyDbType } from './types';
 import {
   Statement,
   Binary,
@@ -11,7 +11,7 @@ import {
   SQL,
   Star,
   Numeric,
-} from 'lubejs';
+} from 'lubejs/core';
 
 const { makeExec, var: variant, builtIn, func, makeInvoke } = SQL;
 
@@ -913,7 +913,7 @@ export function convert<T extends DbType>(
   expr: CompatibleExpression,
   styleId?: CompatibleExpression<number>
 ): Expression<TsTypeOf<T>> {
-  const typeDesc = builtIn(dbTypeToRaw(type));
+  const typeDesc = builtIn(sqlifyDbType(type));
   if (styleId === undefined) {
     return func('CONVERT', true).invokeAsScalar(typeDesc, expr);
   } else {

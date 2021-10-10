@@ -31,20 +31,26 @@ export function parseRawTypeToMssqlType(type: string): ISqlType {
   return sqlType(Number.parseInt(matched.groups!.p1));
 }
 
-
+/**
+ * 将类型转换为mssql库类型。
+ */
 export function toMssqlType(type: DbType): mssql.ISqlType {
   if (Raw.isRaw(type)) {
     return parseRawTypeToMssqlType(type.$sql);
   }
   switch (type.name) {
     case 'BINARY':
-      return mssql.Binary();
+      return mssql.VarBinary();
     case 'BOOLEAN':
       return mssql.Bit();
     case 'DATE':
       return mssql.Date();
     case 'DATETIME':
+      return mssql.DateTime();
+    case 'DATETIMEOFFSET':
       return mssql.DateTimeOffset();
+    case 'TIME':
+      return mssql.Time(3);
     case 'FLOAT':
       return mssql.Real();
     case 'DOUBLE':
@@ -93,7 +99,7 @@ export function toMssqlIsolationLevel(level: ISOLATION_LEVEL): number {
   return result;
 }
 
-export function dbTypeToRaw(type: DbType | Raw): string {
+export function sqlifyDbType(type: DbType | Raw): string {
   if (Raw.isRaw(type)) return type.$sql;
   switch (type.name) {
     case 'STRING':
@@ -114,6 +120,10 @@ export function dbTypeToRaw(type: DbType | Raw): string {
       return 'DATE';
     case 'DATETIME':
       return 'DATETIME';
+    case 'DATETIMEOFFSET':
+      return 'DATETIMEOFFSET(7)';
+    case 'TIME':
+      return 'TIME(3)';
     case 'FLOAT':
       return 'REAL';
     case 'DOUBLE':
@@ -127,8 +137,6 @@ export function dbTypeToRaw(type: DbType | Raw): string {
       return 'NVARCHAR(MAX)';
     case 'ROWFLAG':
       return 'TIMESTAMP';
-    case 'DATETIMEOFFSET':
-      return 'DATETIMEOFFSET(7)';
     default:
       throw new Error(`Unsupport data type ${type['name']}`);
   }
@@ -137,7 +145,7 @@ export function dbTypeToRaw(type: DbType | Raw): string {
 /**
  * 原始类型到DbType类型的映射
  */
-const raw2DbTypeMap: Record<string, keyof typeof DbType> = {
+const rawToDbTypeMap: Record<string, keyof typeof DbType> = {
   NCHAR: 'string',
   NVARCHAR: 'string',
   VARCHAR: 'string',
@@ -153,6 +161,7 @@ const raw2DbTypeMap: Record<string, keyof typeof DbType> = {
   FLOAT: 'float',
   REAL: 'double',
   DATE: 'date',
+  TIME: 'time',
   DATETIME: 'datetime',
   DATETIME2: 'datetime',
   DATETIMEOFFSET: 'datetimeoffset',
@@ -162,15 +171,15 @@ const raw2DbTypeMap: Record<string, keyof typeof DbType> = {
   VARBINARY: 'binary',
   IMAGE: 'binary',
   TIMESTAMP: 'rowflag',
-  ROWVERSION: 'rowflag'
+  ROWVERSION: 'rowflag',
 };
 
-export function rawToDbType(type: string): DbType {
+export function parseRawDbType(type: string): DbType {
   const matched = typeReg.exec(type);
   if (!matched) {
     throw new Error('Error mssql datat type: ' + type);
   }
-  const dbTypeKey = raw2DbTypeMap[matched.groups!.type.toUpperCase()];
+  const dbTypeKey = rawToDbTypeMap[matched.groups!.type.toUpperCase()];
   if (!dbTypeKey) {
     throw new Error('Unknown or unspport mssql data type:' + type);
   }
@@ -192,5 +201,3 @@ export function rawToDbType(type: string): DbType {
     Number.parseInt(matched.groups!.p1),
   ]);
 }
-
-

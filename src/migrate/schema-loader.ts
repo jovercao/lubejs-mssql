@@ -18,6 +18,7 @@ import {
   DbType,
   CompatiableObjectName,
   ObjectName,
+  Expression,
 } from 'lubejs';
 import { database_principal_id } from '../core/build-in';
 import { fullType } from './util';
@@ -35,7 +36,6 @@ const excludeTables: string[] = [LUBE_MIGRATE_TABLE_NAME];
 
 type DatabaseObject = {
   id: number;
-  database: string;
   name: string;
   schema: string;
   comment?: string;
@@ -90,14 +90,7 @@ export class MssqlSchemaLoader extends SchemaLoader {
     if (name) {
       sql.andWhere(t.name.eq(name));
     }
-    return (await this.connection.query(sql)).rows.map((item) =>
-      Object.assign(
-        {
-          database,
-        },
-        item
-      )
-    );
+    return (await this.connection.query(sql)).rows.map((item) => item);
   }
 
   private async _fillTables(
@@ -108,6 +101,7 @@ export class MssqlSchemaLoader extends SchemaLoader {
     for (const table of tables) {
       const tableId = Reflect.get(table, 'id');
       Reflect.deleteProperty(table, 'id');
+      Reflect.deleteProperty(table, 'database');
       table.columns = await this._getColumns(tableId);
       table.primaryKey = await this._getPrimaryKey(tableId);
       table.indexes = await this._getIndexes(tableId);
@@ -123,7 +117,7 @@ export class MssqlSchemaLoader extends SchemaLoader {
   async getTableNames(
     database: string,
     schema?: string
-  ): Promise<Required<ObjectName>[]> {
+  ): Promise<ObjectName[]> {
     return await this._getTables(database, schema);
   }
 
@@ -176,25 +170,21 @@ export class MssqlSchemaLoader extends SchemaLoader {
     if (name) {
       sql.andWhere(v.name.eq(name));
     }
-    return (await this.connection.query(sql)).rows.map((v) => ({
-      database,
-      ...v,
-    }));
+    return (await this.connection.query(sql)).rows.map((v) => v);
   }
 
   private async _fillViews(
     views: Partial<ViewSchema>[]
   ): Promise<ViewSchema[]> {
     for (const view of views) {
+      Reflect.deleteProperty(view, 'database');
+      Reflect.deleteProperty(view, 'id');
       view.scripts = await this._getCode(view.name!);
     }
     return views as ViewSchema[];
   }
 
-  async getViewNames(
-    database: string,
-    schema: string
-  ): Promise<Required<ObjectName>[]> {
+  async getViewNames(database: string, schema: string): Promise<ObjectName[]> {
     return await this._getViews(database, schema);
   }
 
@@ -664,9 +654,17 @@ export class MssqlSchemaLoader extends SchemaLoader {
     // const schemas: SchemaSchema[] = result;
     return result.map((schema) => schema.name);
   }
-  getDatabaseNames(): Promise<string[]> {
-    throw new Error('Method not implemented.');
+
+  async getDatabaseNames(): Promise<string[]> {
+    const d = table('sys.databases');
+    const { rows } = await this.connection.query(
+      SQL.select({
+        name: d.name,
+      }).from(d)
+    );
+    return rows.map((r) => r.name);
   }
+
   private async _getFunctions(
     database: string,
     schema?: string,
@@ -699,10 +697,7 @@ export class MssqlSchemaLoader extends SchemaLoader {
     if (name) {
       sql.andWhere(fn.name.eq(name));
     }
-    return (await this.connection.query(sql)).rows.map((f) => ({
-      database,
-      ...f,
-    }));
+    return (await this.connection.query(sql)).rows.map((f) => f);
   }
 
   private async _fillFunctions(
@@ -717,7 +712,7 @@ export class MssqlSchemaLoader extends SchemaLoader {
   async getFunctionNames(
     database: string,
     schema?: string
-  ): Promise<Required<ObjectName>[]> {
+  ): Promise<ObjectName[]> {
     return this._getFunctions(database, schema);
   }
 
@@ -772,10 +767,7 @@ export class MssqlSchemaLoader extends SchemaLoader {
     if (name) {
       sql.andWhere(proc.name.eq(name));
     }
-    return (await this.connection.query(sql)).rows.map((p) => ({
-      database,
-      ...p,
-    }));
+    return (await this.connection.query(sql)).rows.map((p) => p);
   }
 
   private async _fillProcedure(
@@ -787,10 +779,7 @@ export class MssqlSchemaLoader extends SchemaLoader {
     return proces as ProcedureSchema[];
   }
 
-  getProcedureNames(
-    database: string,
-    schema?: string
-  ): Promise<Required<ObjectName>[]> {
+  getProcedureNames(database: string, schema?: string): Promise<ObjectName[]> {
     return this._getProcedures(database, schema);
   }
 
@@ -815,6 +804,7 @@ export class MssqlSchemaLoader extends SchemaLoader {
   }
 
   async getDatabaseSchema(name: string): Promise<DatabaseSchema> {
+    this.currentDatabase = undefined;
     await this.changeDatabase(name);
     const d = table('sys.databases');
     const sql = select({

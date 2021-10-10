@@ -1,4 +1,9 @@
-import { Scalar, isBinary, Uuid, Decimal } from 'lubejs/core';
+import { Scalar, isBinary, Uuid, Decimal, Time, DbType } from 'lubejs/core';
+import {
+  formatDate,
+  formatDateTime,
+  formatIsoDateTimeLocale,
+} from './date-format';
 
 /**
  * 分组
@@ -59,22 +64,26 @@ export function formatSql(
 //   }${fixNum(Math.abs(date.getTimezoneOffset() / 60), 2)}:00`;
 // }
 
+function invalidType(dbType: DbType, value: Scalar) {
+  return new Error(`Invalid dbtype ${dbType.name} with value ${value}。`);
+}
+
 /**
  * 编译字面量
  */
-export function sqlifyLiteral(value: Scalar): string {
+export function sqlifyLiteral(value: Scalar, dbType?: DbType): string {
   // 为方便JS，允许undefined进入，留给TS语法检查
   if (value === undefined) {
     throw new Error(`Unspport db value undefined, pls use null instead it.`);
   }
-  if (value === null || value === undefined) {
+  if (value === null) {
     return 'NULL';
   }
 
   const type = typeof value;
 
   if (type === 'string') {
-    return "'" + (value as string).replace(/'/g, "''") + "'";
+    return "N'" + (value as string).replace(/'/g, "''") + "'";
   }
 
   if (type === 'number' || type === 'bigint') {
@@ -82,15 +91,33 @@ export function sqlifyLiteral(value: Scalar): string {
   }
 
   if (type === 'boolean') {
+    if (dbType && dbType.name !== 'BOOLEAN') {
+      throw invalidType(dbType, value);
+    }
     return value ? '1' : '0';
   }
 
   if (value instanceof Date) {
-    return `CONVERT(DATETIMEOFFSET(7), '${value.toISOString()}')`;
+    if (!dbType) {
+      // 使用本地时区
+      return `CAST('${formatIsoDateTimeLocale(value)}' AS DATETIMEOFFSET)`;
+    }
+    switch (dbType.name) {
+      case 'DATE':
+        return "'" + formatDate(value) + "'";
+      case 'DATETIME':
+        return "'" + formatDateTime(value) + "'";
+      case 'DATETIMEOFFSET':
+        return "'" + formatIsoDateTimeLocale(value) + "'";
+    }
   }
 
   if (value instanceof Uuid) {
     return '0x' + Buffer.from(value).toString('hex');
+  }
+
+  if (value instanceof Time) {
+    return "'" + value.toString() + "'";
   }
 
   if (value instanceof Decimal) {
@@ -100,7 +127,11 @@ export function sqlifyLiteral(value: Scalar): string {
   if (isBinary(value)) {
     return '0x' + Buffer.from(value).toString('hex');
   }
-  throw new Error(`unsupport constant value type: ${type}, value: ${value}`);
+  throw new Error(
+    `unsupport constant value type: ${type}, value: ${value}, dbType: ${
+      dbType?.name || '<none>'
+    }.`
+  );
 }
 
 // export function deprecate(msg: string): MethodDecorator | PropertyDecorator | ClassDecorator {

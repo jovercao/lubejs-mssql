@@ -53,7 +53,7 @@ import {
   PARAMETER_DIRECTION,
   Field,
 } from 'lubejs/core';
-import { dbTypeToRaw, rawToDbType } from './types';
+import { sqlifyDbType, parseRawDbType } from './types';
 import { sqlifyLiteral } from './util';
 
 export type MssqlSqlOptions = SqlOptions;
@@ -253,11 +253,11 @@ export class MssqlSqlUtil extends SqlUtil {
     );
   }
 
-  public sqlifyLiteral(literal: Scalar | Raw): string {
+  public sqlifyLiteral(literal: Scalar | Raw, dbType?: DbType): string {
     if (Raw.isRaw(literal)) {
       return literal.$sql;
     }
-    return sqlifyLiteral(literal);
+    return sqlifyLiteral(literal, dbType);
   }
 
   protected sqlifyDropSequence(statement: DropSequence): string {
@@ -595,16 +595,16 @@ SET IDENTITY_INSERT ${this.sqlifyObjectName(insert.$table.$name)} OFF
     if (Raw.isRaw(type)) {
       return type.$sql;
     }
-    return dbTypeToRaw(type);
+    return sqlifyDbType(type);
   }
 
   parseRawType(type: string): DbType {
-    return rawToDbType(type);
+    return parseRawDbType(type);
   }
 
   protected sqlifyOffsetLimit(
     select: Select<any>,
-    params: Set<Parameter>
+    params?: Set<Parameter>
   ): string {
     let sql = '';
     if (select.$offset === undefined && select.$limit === undefined) return sql;

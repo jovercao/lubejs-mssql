@@ -6,6 +6,7 @@ import {
   Scalar,
   Decimal,
   Uuid,
+  Time,
 } from 'lubejs';
 import { toMssqlType } from './types';
 import { Connection as MssqlConn } from '@jovercao/mssql';
@@ -86,21 +87,28 @@ function normalDatas(datas: mssql.IRecordSet<any>): any[] {
       for (const row of datas) {
         const value = row[column] as string;
         if (value !== undefined && value !== null) {
-          row[column] = BigInt(row[column]);
+          row[column] = BigInt(value);
+        }
+      }
+    } else if (declare === 'time') {
+      for (const row of datas) {
+        const value = row[column] as string;
+        if (value !== undefined && value !== null) {
+          row[column] = new Time(value);
         }
       }
     } else if (declare === 'decimal' || declare === 'numeric') {
       for (const row of datas) {
         const value = row[column] as string;
         if (value !== undefined && value !== null) {
-          row[column] = new Decimal(row[column]);
+          row[column] = new Decimal(value);
         }
       }
     } else if (declare === 'uniqueidentifier') {
       for (const row of datas) {
         const value = row[column] as string;
         if (value !== undefined && value !== null) {
-          row[column] = new Uuid(row[column]);
+          row[column] = new Uuid(value);
         }
       }
     }

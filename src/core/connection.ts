@@ -21,6 +21,7 @@ const DefaultConnectOptions: MssqlConfig = {
   port: 1433,
   options: {
     encrypt: false,
+    // 信任连接，不检查SSL证书
     trustedConnection: true,
     // 设置为不自动回滚
     abortTransactionOnError: false,
