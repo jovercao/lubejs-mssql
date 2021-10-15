@@ -57,8 +57,8 @@ import {
 } from './build-in';
 import {
   Binary,
-  CompatiableObjectName,
-  CompatibleExpression,
+  XObjectName,
+  XExpression,
   Condition,
   DbType,
   Expression,
@@ -67,7 +67,7 @@ import {
   SQL,
   StandardTranslator,
   Star,
-  TsTypeOf,
+  ScalarFromDbType,
 } from 'lubejs/core';
 import { MssqlDbProvider } from './provider';
 
@@ -86,27 +86,27 @@ export class MssqlStandardTranslator implements StandardTranslator {
     return schema_name();
   }
 
-  abs<T extends Numeric>(value: CompatibleExpression<T>): Expression<T> {
+  abs<T extends Numeric>(value: XExpression<T>): Expression<T> {
     return abs(value);
   }
 
-  exp<T extends Numeric>(value: CompatibleExpression<T>): Expression<T> {
+  exp<T extends Numeric>(value: XExpression<T>): Expression<T> {
     return exp(value) as any;
   }
 
-  ceil<T extends Numeric>(value: CompatibleExpression<T>): Expression<T> {
+  ceil<T extends Numeric>(value: XExpression<T>): Expression<T> {
     return ceiling(value);
   }
 
-  floor<T extends Numeric>(value: CompatibleExpression<T>): Expression<T> {
+  floor<T extends Numeric>(value: XExpression<T>): Expression<T> {
     return floor(value);
   }
 
-  ln<T extends Numeric>(value: CompatibleExpression<T>): Expression<T> {
+  ln<T extends Numeric>(value: XExpression<T>): Expression<T> {
     return log10(value);
   }
 
-  log<T extends Numeric>(value: CompatibleExpression<T>): Expression<T> {
+  log<T extends Numeric>(value: XExpression<T>): Expression<T> {
     return log(value);
   }
 
@@ -115,17 +115,17 @@ export class MssqlStandardTranslator implements StandardTranslator {
   }
 
   power<T extends Numeric>(
-    a: CompatibleExpression<T>,
-    b: CompatibleExpression<Numeric>
+    a: XExpression<T>,
+    b: XExpression<Numeric>
   ): Expression<T> {
     return power(a, b);
   }
 
-  radians<T extends Numeric>(value: CompatibleExpression<T>): Expression<T> {
+  radians<T extends Numeric>(value: XExpression<T>): Expression<T> {
     return radians(value);
   }
 
-  degrees<T extends Numeric>(value: CompatibleExpression<T>): Expression<T> {
+  degrees<T extends Numeric>(value: XExpression<T>): Expression<T> {
     return degrees(value);
   }
 
@@ -134,68 +134,68 @@ export class MssqlStandardTranslator implements StandardTranslator {
   }
 
   round(
-    value: CompatibleExpression<Numeric>,
-    s: CompatibleExpression<Numeric>
+    value: XExpression<Numeric>,
+    s: XExpression<Numeric>
   ): Expression<Numeric> {
     return round(value, s);
   }
 
-  sign<T extends Numeric>(value: CompatibleExpression<T>): Expression<T> {
+  sign<T extends Numeric>(value: XExpression<T>): Expression<T> {
     return sign(value);
   }
 
-  sqrt(value: CompatibleExpression<number>): Expression<number> {
+  sqrt(value: XExpression<number>): Expression<number> {
     return sqrt(value);
   }
 
-  cos(value: CompatibleExpression<number>): Expression<number> {
+  cos(value: XExpression<number>): Expression<number> {
     return cos(value);
   }
 
-  sin(value: CompatibleExpression<number>): Expression<number> {
+  sin(value: XExpression<number>): Expression<number> {
     return sin(value);
   }
 
-  tan(value: CompatibleExpression<number>): Expression<number> {
+  tan(value: XExpression<number>): Expression<number> {
     return tan(value);
   }
 
-  acos(value: CompatibleExpression<number>): Expression<number> {
+  acos(value: XExpression<number>): Expression<number> {
     return acos(value);
   }
 
-  asin(value: CompatibleExpression<number>): Expression<number> {
+  asin(value: XExpression<number>): Expression<number> {
     return asin(value);
   }
 
-  atan(value: CompatibleExpression<number>): Expression<number> {
+  atan(value: XExpression<number>): Expression<number> {
     return atan(value);
   }
 
-  atan2(value: CompatibleExpression<number>): Expression<number> {
+  atan2(value: XExpression<number>): Expression<number> {
     return atan2(value);
   }
 
-  cot(value: CompatibleExpression<number>): Expression<number> {
+  cot(value: XExpression<number>): Expression<number> {
     return cot(value);
   }
 
   nvl<T extends Scalar>(
-    value: CompatibleExpression<T>,
-    defaultValue: CompatibleExpression<T>
+    value: XExpression<T>,
+    defaultValue: XExpression<T>
   ): Expression<T> {
     return isNull(value, defaultValue);
   }
 
-  count(expr: Star | CompatibleExpression<Scalar>): Expression<number> {
+  count(expr: Star | XExpression<Scalar>): Expression<number> {
     return count(expr);
   }
 
-  avg(expr: CompatibleExpression<Numeric>): Expression<Numeric> {
+  avg(expr: XExpression<Numeric>): Expression<Numeric> {
     return avg(expr);
   }
 
-  sum(expr: CompatibleExpression<Numeric>): Expression<Numeric> {
+  sum(expr: XExpression<Numeric>): Expression<Numeric> {
     return sum(expr);
   }
 
@@ -214,8 +214,8 @@ export class MssqlStandardTranslator implements StandardTranslator {
    * @returns
    */
   identityValue(
-    table: CompatibleExpression<string>,
-    column: CompatibleExpression<string>
+    table: XExpression<string>,
+    column: XExpression<string>
   ): Expression<number> {
     return IDENTITY;
     // return StandardOperation.create(identityValue.name, [table, column]);
@@ -228,9 +228,9 @@ export class MssqlStandardTranslator implements StandardTranslator {
    * @returns
    */
   convert<T extends DbType>(
-    expr: CompatibleExpression,
+    expr: XExpression,
     toType: T
-  ): Expression<TsTypeOf<T>> {
+  ): Expression<ScalarFromDbType<T>> {
     return convert(toType, expr);
   }
 
@@ -254,8 +254,8 @@ export class MssqlStandardTranslator implements StandardTranslator {
    * 切换时区
    */
   switchTimezone(
-    date: CompatibleExpression<Date>,
-    timeZone: CompatibleExpression<string>
+    date: XExpression<Date>,
+    timeZone: XExpression<string>
   ): Expression<Date> {
     return switchOffset(date, timeZone);
   }
@@ -267,7 +267,7 @@ export class MssqlStandardTranslator implements StandardTranslator {
    * @returns
    */
   formatDate(
-    date: CompatibleExpression<Date>,
+    date: XExpression<Date>,
     fmt: string
   ): Expression<string> {
     return format(date, fmt);
@@ -278,7 +278,7 @@ export class MssqlStandardTranslator implements StandardTranslator {
    * @param date
    * @returns
    */
-  yearOf(date: CompatibleExpression<Date>): Expression<number> {
+  yearOf(date: XExpression<Date>): Expression<number> {
     return datePart(DATE_PART.YEAR, date);
   }
 
@@ -287,7 +287,7 @@ export class MssqlStandardTranslator implements StandardTranslator {
    * @param date
    * @returns
    */
-  monthOf(date: CompatibleExpression<Date>): Expression<number> {
+  monthOf(date: XExpression<Date>): Expression<number> {
     return datePart(DATE_PART.MONTH, date);
   }
 
@@ -296,7 +296,7 @@ export class MssqlStandardTranslator implements StandardTranslator {
    * @param date
    * @returns
    */
-  dayOf(date: CompatibleExpression<Date>): Expression<number> {
+  dayOf(date: XExpression<Date>): Expression<number> {
     return datePart(DATE_PART.DAY, date);
   }
 
@@ -307,8 +307,8 @@ export class MssqlStandardTranslator implements StandardTranslator {
    * @returns
    */
   daysBetween(
-    start: CompatibleExpression<Date>,
-    end: CompatibleExpression<Date>
+    start: XExpression<Date>,
+    end: XExpression<Date>
   ): Expression<number> {
     return dateDiff(DATE_PART.DAY, start, end);
   }
@@ -320,8 +320,8 @@ export class MssqlStandardTranslator implements StandardTranslator {
    * @returns
    */
   monthsBetween(
-    start: CompatibleExpression<Date>,
-    end: CompatibleExpression<Date>
+    start: XExpression<Date>,
+    end: XExpression<Date>
   ): Expression<number> {
     return dateDiff(DATE_PART.MONTH, start, end);
   }
@@ -333,8 +333,8 @@ export class MssqlStandardTranslator implements StandardTranslator {
    * @returns
    */
   yearsBetween(
-    start: CompatibleExpression<Date>,
-    end: CompatibleExpression<Date>
+    start: XExpression<Date>,
+    end: XExpression<Date>
   ): Expression<number> {
     return dateDiff(DATE_PART.YEAR, start, end);
   }
@@ -346,8 +346,8 @@ export class MssqlStandardTranslator implements StandardTranslator {
    * @returns
    */
   hoursBetween(
-    start: CompatibleExpression<Date>,
-    end: CompatibleExpression<Date>
+    start: XExpression<Date>,
+    end: XExpression<Date>
   ): Expression<number> {
     return dateDiff(DATE_PART.HOUR, start, end);
   }
@@ -359,8 +359,8 @@ export class MssqlStandardTranslator implements StandardTranslator {
    * @returns
    */
   minutesBetween(
-    start: CompatibleExpression<Date>,
-    end: CompatibleExpression<Date>
+    start: XExpression<Date>,
+    end: XExpression<Date>
   ): Expression<number> {
     return dateDiff(DATE_PART.MINUTE, start, end);
   }
@@ -372,43 +372,43 @@ export class MssqlStandardTranslator implements StandardTranslator {
    * @returns
    */
   secondsBetween(
-    start: CompatibleExpression<Date>,
-    end: CompatibleExpression<Date>
+    start: XExpression<Date>,
+    end: XExpression<Date>
   ): Expression<number> {
     return dateDiff(DATE_PART.SECOND, start, end);
   }
 
   addDays(
-    date: CompatibleExpression<Date>,
-    days: CompatibleExpression<number>
+    date: XExpression<Date>,
+    days: XExpression<number>
   ): Expression<Date> {
     return dateAdd(DATE_PART.DAY, days, date);
   }
 
   addMonths(
-    date: CompatibleExpression<Date>,
-    months: CompatibleExpression<number>
+    date: XExpression<Date>,
+    months: XExpression<number>
   ): Expression<Date> {
     return dateAdd(DATE_PART.MONTH, months, date);
   }
 
   addYears(
-    date: CompatibleExpression<Date>,
-    years: CompatibleExpression<number>
+    date: XExpression<Date>,
+    years: XExpression<number>
   ): Expression<Date> {
     return dateAdd(DATE_PART.YEAR, years, date);
   }
 
   addHours(
-    date: CompatibleExpression<Date>,
-    hours: CompatibleExpression<number>
+    date: XExpression<Date>,
+    hours: XExpression<number>
   ): Expression<Date> {
     return dateAdd(DATE_PART.HOUR, hours, date);
   }
 
   addMinutes(
-    date: CompatibleExpression<Date>,
-    minutes: CompatibleExpression<number>
+    date: XExpression<Date>,
+    minutes: XExpression<number>
   ): Expression<Date> {
     return dateAdd(DATE_PART.MINUTE, minutes, date);
   }
@@ -420,8 +420,8 @@ export class MssqlStandardTranslator implements StandardTranslator {
    * @returns
    */
   addSeconds(
-    date: CompatibleExpression<Date>,
-    seconds: CompatibleExpression<number>
+    date: XExpression<Date>,
+    seconds: XExpression<number>
   ): Expression<Date> {
     return dateAdd(DATE_PART.SECOND, seconds, date);
   }
@@ -431,7 +431,7 @@ export class MssqlStandardTranslator implements StandardTranslator {
    * @param str
    * @returns
    */
-  strlen(str: CompatibleExpression<string>): Expression<number> {
+  strlen(str: XExpression<string>): Expression<number> {
     return len(str);
   }
 
@@ -443,9 +443,9 @@ export class MssqlStandardTranslator implements StandardTranslator {
    * @returns
    */
   substr(
-    str: CompatibleExpression<string>,
-    start: CompatibleExpression<number>,
-    length: CompatibleExpression<number>
+    str: XExpression<string>,
+    start: XExpression<number>,
+    length: XExpression<number>
   ): Expression<string> {
     return substring(str, start, length);
   }
@@ -459,9 +459,9 @@ export class MssqlStandardTranslator implements StandardTranslator {
    * @returns
    */
   replace(
-    str: CompatibleExpression<string>,
-    search: CompatibleExpression<string>,
-    to: CompatibleExpression<string>
+    str: XExpression<string>,
+    search: XExpression<string>,
+    to: XExpression<string>
   ): Expression<string> {
     return replace(str, search, to);
   }
@@ -471,7 +471,7 @@ export class MssqlStandardTranslator implements StandardTranslator {
    * @param str
    * @returns
    */
-  trim(str: CompatibleExpression<string>): Expression<string> {
+  trim(str: XExpression<string>): Expression<string> {
     return ltrim(rtrim(str));
   }
 
@@ -480,7 +480,7 @@ export class MssqlStandardTranslator implements StandardTranslator {
    * @param str
    * @returns
    */
-  trimEnd(str: CompatibleExpression<string>): Expression<string> {
+  trimEnd(str: XExpression<string>): Expression<string> {
     return rtrim(str);
   }
 
@@ -489,7 +489,7 @@ export class MssqlStandardTranslator implements StandardTranslator {
    * @param str
    * @returns
    */
-  upper(str: CompatibleExpression<string>): Expression<string> {
+  upper(str: XExpression<string>): Expression<string> {
     return upper(str);
   }
 
@@ -498,7 +498,7 @@ export class MssqlStandardTranslator implements StandardTranslator {
    * @param str
    * @returns
    */
-  lower(str: CompatibleExpression<string>): Expression<string> {
+  lower(str: XExpression<string>): Expression<string> {
     return lower(str);
   }
 
@@ -509,9 +509,9 @@ export class MssqlStandardTranslator implements StandardTranslator {
    * @returns
    */
   strpos(
-    str: CompatibleExpression<string>,
-    search: CompatibleExpression<string>,
-    startAt?: CompatibleExpression<number>
+    str: XExpression<string>,
+    search: XExpression<string>,
+    startAt?: XExpression<number>
   ): Expression<number> {
     return charIndex(search, str, startAt);
   }
@@ -521,23 +521,23 @@ export class MssqlStandardTranslator implements StandardTranslator {
    * @param str 字符编码
    * @returns
    */
-  ascii(str: CompatibleExpression<string>): Expression<number> {
+  ascii(str: XExpression<string>): Expression<number> {
     return ascii(str);
   }
 
-  asciiChar(code: CompatibleExpression<number>): Expression<string> {
+  asciiChar(code: XExpression<number>): Expression<string> {
     return char(code);
   }
 
-  unicode(str: CompatibleExpression<string>): Expression<number> {
+  unicode(str: XExpression<string>): Expression<number> {
     return unicode(str);
   }
 
-  unicodeChar(code: CompatibleExpression<number>): Expression<string> {
+  unicodeChar(code: XExpression<number>): Expression<string> {
     return char(code);
   }
 
-  existsTable(name: CompatiableObjectName): Condition {
+  existsTable(name: XObjectName): Condition {
     return SQL.exists(
       SQL.select(1)
         .from({
@@ -556,7 +556,7 @@ export class MssqlStandardTranslator implements StandardTranslator {
     return db_id(database).isNotNull();
   }
 
-  existsView(name: CompatiableObjectName): Condition {
+  existsView(name: XObjectName): Condition {
     return SQL.exists(
       SQL.select(1)
         .from({
@@ -571,7 +571,7 @@ export class MssqlStandardTranslator implements StandardTranslator {
     );
   }
 
-  existsFunction(name: CompatiableObjectName): Condition {
+  existsFunction(name: XObjectName): Condition {
     const f = SQL.table('sys.objects').as('f');
     return SQL.exists(
       SQL.select(1)
@@ -590,7 +590,7 @@ export class MssqlStandardTranslator implements StandardTranslator {
     );
   }
 
-  existsProcedure(name: CompatiableObjectName): Condition {
+  existsProcedure(name: XObjectName): Condition {
     return SQL.exists(
       SQL.select(1)
         .from({
@@ -605,7 +605,7 @@ export class MssqlStandardTranslator implements StandardTranslator {
     );
   }
 
-  existsSequence(name: CompatiableObjectName): Condition {
+  existsSequence(name: XObjectName): Condition {
     return SQL.exists(
       SQL.select(1)
         .from({
@@ -621,7 +621,7 @@ export class MssqlStandardTranslator implements StandardTranslator {
   }
 
   sequenceNextValue<T extends Numeric>(
-    sequenceName: CompatiableObjectName<string>
+    sequenceName: XObjectName<string>
   ): Expression<T> {
     return SQL.raw(
       `NEXT VALUE FOR ${this.sqlUtil.sqlifyObjectName(sequenceName)}`

@@ -3,11 +3,11 @@ import {
   Statement,
   Binary,
   BuiltIn,
-  CompatibleExpression,
+  XExpression,
   DbType,
   Expression,
   Scalar,
-  TsTypeOf,
+  ScalarFromDbType,
   SQL,
   Star,
   Numeric,
@@ -17,15 +17,15 @@ const { makeExec, var: variant, builtIn, func, makeInvoke } = SQL;
 
 type InvokeHandler0<TResult extends Scalar> = () => Expression<TResult>;
 type InvokeHandler1<TResult extends Scalar, TArg1 extends Scalar> = (
-  expr: CompatibleExpression<TArg1>
+  expr: XExpression<TArg1>
 ) => Expression<TResult>;
 type InvokeHandler2<
   TResult extends Scalar,
   TArg1 extends Scalar,
   TArg2 extends Scalar
 > = (
-  expr1: CompatibleExpression<TArg1>,
-  expr2: CompatibleExpression<TArg2>
+  expr1: XExpression<TArg1>,
+  expr2: XExpression<TArg2>
 ) => Expression<TResult>;
 // type InvokeHandler2<TResult extends Scalar, TArg1 extends Scalar, TArg2 extends Scalar> = (arg1: CompatibleExpression<TArg1>, arg2: CompatibleExpression<TArg2>) => Expression<TResult>;
 // type InvokeHandler3<TResult extends Scalar, TArg1 extends Scalar, TArg2 extends Scalar, TArg3 extends Scalar> = (arg1: CompatibleExpression<TArg1>, arg2: CompatibleExpression<TArg2>, arg3: CompatibleExpression<TArg3>) => Expression<TResult>;
@@ -42,15 +42,12 @@ type InvokeHandler2<
 
 export type DatePart = BuiltIn<keyof typeof DATE_PART>;
 
-export const count: (
-  expr: CompatibleExpression<Scalar> | Star
-) => Expression<number> = makeInvoke('scalar', 'count', true);
-export const avg: <T extends Numeric>(
-  expr: CompatibleExpression<T>
-) => Expression<T> = makeInvoke('scalar', 'avg', true);
-export const sum: <T extends Numeric>(
-  expr: CompatibleExpression<T>
-) => Expression<T> = makeInvoke('scalar', 'sum', true);
+export const count: (expr: XExpression<Scalar> | Star) => Expression<number> =
+  makeInvoke('scalar', 'count', true);
+export const avg: <T extends Numeric>(expr: XExpression<T>) => Expression<T> =
+  makeInvoke('scalar', 'avg', true);
+export const sum: <T extends Numeric>(expr: XExpression<T>) => Expression<T> =
+  makeInvoke('scalar', 'sum', true);
 export const max: <T extends Exclude<Scalar, Binary>>(
   expr: Expression<T>
 ) => Expression<T> = makeInvoke('scalar', 'max', true);
@@ -63,13 +60,13 @@ export const exp: InvokeHandler1<Numeric, Numeric> = makeInvoke(
   true
 );
 export const round: (
-  expr: CompatibleExpression<Numeric>,
-  precision: CompatibleExpression<Numeric>
+  expr: XExpression<Numeric>,
+  precision: XExpression<Numeric>
 ) => Expression<Numeric> = makeInvoke('scalar', 'round', true);
 
 export const nvl: <T1 extends Scalar, T2 extends Scalar>(
-  expr: CompatibleExpression<T1>,
-  default_value: CompatibleExpression<T2>
+  expr: XExpression<T1>,
+  default_value: XExpression<T2>
 ) => Expression<T1 | T2> = makeInvoke('scalar', 'nvl', true);
 export const stdev: InvokeHandler1<number, number> = makeInvoke(
   'scalar',
@@ -78,15 +75,15 @@ export const stdev: InvokeHandler1<number, number> = makeInvoke(
 );
 export const dateName: (
   part: DatePart,
-  date: CompatibleExpression<Date>
+  date: XExpression<Date>
 ) => Expression<string> = makeInvoke('scalar', 'dateName', true);
 export const datePart: (
   part: DatePart,
-  date: CompatibleExpression<Date>
+  date: XExpression<Date>
 ) => Expression<number> = makeInvoke('scalar', 'datePart', true);
 export const isNull: <T1 extends Scalar, T2 extends Scalar>(
-  expr: CompatibleExpression<T1>,
-  default_value: CompatibleExpression<T2>
+  expr: XExpression<T1>,
+  default_value: XExpression<T2>
 ) => Expression<T1 | T2> = makeInvoke('scalar', 'isNull', true);
 export const len: InvokeHandler1<number, string> = makeInvoke(
   'scalar',
@@ -121,13 +118,13 @@ export const day: InvokeHandler1<number, Date> = makeInvoke(
 );
 export const dateAdd: (
   part: DatePart,
-  increment: CompatibleExpression<number>,
-  date: CompatibleExpression<Date>
+  increment: XExpression<number>,
+  date: XExpression<Date>
 ) => Expression<Date> = makeInvoke('scalar', 'dateAdd', true);
 export const dateDiff: (
   part: DatePart,
-  startDate: CompatibleExpression<Date>,
-  endDate: CompatibleExpression<Date>
+  startDate: XExpression<Date>,
+  endDate: XExpression<Date>
 ) => Expression<number> = makeInvoke('scalar', 'dateDiff', true);
 export const sysDateTime: InvokeHandler0<Date> = makeInvoke(
   'scalar',
@@ -146,22 +143,22 @@ export const sysDateTimeOffset: InvokeHandler0<Date> = makeInvoke(
 );
 
 export const switchOffset: (
-  date: CompatibleExpression<Date>,
-  time_zone: CompatibleExpression<string>
+  date: XExpression<Date>,
+  time_zone: XExpression<string>
 ) => Expression<Date> = makeInvoke('scalar', 'switchOffset', true);
 
 export const charIndex: (
-  pattern: CompatibleExpression<string>,
-  str: CompatibleExpression<string>,
-  startIndex?: CompatibleExpression<number>
+  pattern: XExpression<string>,
+  str: XExpression<string>,
+  startIndex?: XExpression<number>
 ) => Expression<number> = makeInvoke('scalar', 'charIndex', true);
 export const left: (
-  str: CompatibleExpression<string>,
-  length: CompatibleExpression<number>
+  str: XExpression<string>,
+  length: XExpression<number>
 ) => Expression<number> = makeInvoke('scalar', 'left', true);
 export const right: (
-  str: CompatibleExpression<string>,
-  length: CompatibleExpression<number>
+  str: XExpression<string>,
+  length: XExpression<number>
 ) => Expression<number> = makeInvoke('scalar', 'right', true);
 export const str: InvokeHandler1<string, Scalar> = makeInvoke(
   'scalar',
@@ -169,9 +166,9 @@ export const str: InvokeHandler1<string, Scalar> = makeInvoke(
   true
 );
 export const substring: (
-  expr: CompatibleExpression<string>,
-  start: CompatibleExpression<number>,
-  length: CompatibleExpression<number>
+  expr: XExpression<string>,
+  start: XExpression<number>,
+  length: XExpression<number>
 ) => Expression<string> = makeInvoke('scalar', 'substring', true);
 export const ascii: InvokeHandler1<number, string> = makeInvoke(
   'scalar',
@@ -194,8 +191,8 @@ export const nchar: InvokeHandler1<string, number> = makeInvoke(
   true
 );
 export const patIndex: (
-  pattern: CompatibleExpression<string>,
-  str: CompatibleExpression<string>
+  pattern: XExpression<string>,
+  str: XExpression<string>
 ) => Expression<number> = makeInvoke('scalar', 'patIndex', true);
 export const ltrim: InvokeHandler1<string, string> = makeInvoke(
   'scalar',
@@ -218,10 +215,10 @@ export const reverse: InvokeHandler1<string, string> = makeInvoke(
   true
 );
 export const stuff: (
-  expression_to_be_searched: CompatibleExpression<string>,
-  starting_position: CompatibleExpression<number>,
-  number_of_chars: CompatibleExpression<number>,
-  replacement_expression: CompatibleExpression<string>
+  expression_to_be_searched: XExpression<string>,
+  starting_position: XExpression<number>,
+  number_of_chars: XExpression<number>,
+  replacement_expression: XExpression<string>
 ) => Expression<string> = makeInvoke('scalar', 'stuff', true);
 export const quotedName: InvokeHandler1<string, string> = makeInvoke(
   'scalar',
@@ -239,9 +236,9 @@ export const upper: InvokeHandler1<string, string> = makeInvoke(
   true
 );
 export const replace: (
-  expression_to_be_searched: CompatibleExpression<string>,
-  search_expression: CompatibleExpression<string>,
-  replacement_expression: CompatibleExpression<string>
+  expression_to_be_searched: XExpression<string>,
+  search_expression: XExpression<string>,
+  replacement_expression: XExpression<string>
 ) => Expression<string> = makeInvoke('scalar', 'replace', true);
 export const abs: InvokeHandler1<Numeric, Numeric> = makeInvoke(
   'scalar',
@@ -495,7 +492,7 @@ export const CONNECTIONS = variant<number, '@CONNECTIONS'>(
  */
 export const CPU_BUSY = variant<number, '@CPU_BUSY'>(
   '@CPU_BUSY',
-  DbType.double
+  DbType.float64
 );
 /**
  * 返回 SET DATEFIRST 参数的当前值，SET DATEFIRST 参数指明所规定的每周第一天：1 对应星期一，2 对应星期二，依次类推，用 7 对应星期日。
@@ -718,7 +715,7 @@ export const MssqlDbType = {
   smallint: DbType.raw('smallint'),
   int: DbType.raw('int'),
   bigint: DbType.raw('bigint'),
-  float: defaultType(DbType.raw('float'), (n: number) =>
+  float: defaultType(DbType.raw('FLOAT32'), (n: number) =>
     DbType.raw(`float(${n})`)
   ),
   real: DbType.raw('real'),
@@ -821,7 +818,7 @@ export type REAL = {
 export type R = REAL;
 
 export type FLOAT = {
-  name: 'float';
+  name: 'FLOAT32';
   precision?: number;
 };
 
@@ -910,9 +907,9 @@ export type MssqlDbType =
 
 export function convert<T extends DbType>(
   type: T,
-  expr: CompatibleExpression,
-  styleId?: CompatibleExpression<number>
-): Expression<TsTypeOf<T>> {
+  expr: XExpression,
+  styleId?: XExpression<number>
+): Expression<ScalarFromDbType<T>> {
   const typeDesc = builtIn(sqlifyDbType(type));
   if (styleId === undefined) {
     return func('CONVERT', true).invokeAsScalar(typeDesc, expr);
@@ -922,8 +919,8 @@ export function convert<T extends DbType>(
 }
 
 export const format: (
-  date: CompatibleExpression<Date>,
-  format: CompatibleExpression<string>
+  date: XExpression<Date>,
+  format: XExpression<string>
 ) => Expression<string> = makeInvoke('scalar', 'FORMAT', true);
 
 /**
@@ -947,37 +944,35 @@ export const schema_name: () => Expression<string> = makeInvoke(
 /**
  * 获取对象ID
  */
-export const object_id: (
-  name: CompatibleExpression<string>
-) => Expression<number> = makeInvoke('scalar', 'object_id', true);
+export const object_id: (name: XExpression<string>) => Expression<number> =
+  makeInvoke('scalar', 'object_id', true);
 
 /**
  * 通过对象ID获取对象名称
  */
 export const object_name: (
-  objectId: CompatibleExpression<number>
+  objectId: XExpression<number>
 ) => Expression<string> = makeInvoke('scalar', 'object_id', true);
 
 /**
  * 获取对象定义代码
  */
 export const object_definition: (
-  objectId: CompatibleExpression<number>
+  objectId: XExpression<number>
 ) => Expression<string> = makeInvoke('scalar', 'object_definition', true);
 
 /**
  * 获取数据库的上级ID
  */
 export const database_principal_id: (
-  dbName: CompatibleExpression<string>
+  dbName: XExpression<string>
 ) => Expression<string> = makeInvoke('scalar', 'database_principal_id', true);
 
 /**
  * 获取数据库的上级ID
  */
-export const db_id: (
-  dbName: CompatibleExpression<string>
-) => Expression<number> = makeInvoke('scalar', 'db_id', true);
+export const db_id: (dbName: XExpression<string>) => Expression<number> =
+  makeInvoke('scalar', 'db_id', true);
 
 /**
  * 系统重命名函数

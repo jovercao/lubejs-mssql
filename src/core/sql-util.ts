@@ -34,7 +34,7 @@ import {
   DropProcedure,
   DropFunction,
   DropIndex,
-  CompatiableObjectName,
+  XObjectName,
   ObjectName,
   Raw,
   ColumnDeclareForAlter,
@@ -51,10 +51,9 @@ import {
   BINARY_OPERATION_OPERATOR,
   Variant,
   PARAMETER_DIRECTION,
-  Field,
+  Declare,
 } from 'lubejs/core';
-import { sqlifyDbType, parseRawDbType } from './types';
-import { sqlifyLiteral } from './util';
+import { sqlifyDbType, parseRawDbType, sqlifyLiteral } from './types';
 
 export type MssqlSqlOptions = SqlOptions;
 
@@ -124,7 +123,7 @@ export class MssqlSqlUtil extends SqlUtil {
   }
 
   private escapeDotReg = /(?<!\\)\./g;
-  parseObjectName(name: CompatiableObjectName): ObjectName {
+  parseObjectName(name: XObjectName): ObjectName {
     if (typeof name === 'string') {
       // WARN: 此处可能会产生问题 [table.name] 这种写法将会产生错误解析.
       const [n, schema, database] = name.split(/(?<!\\)\./g).reverse();
@@ -184,9 +183,10 @@ export class MssqlSqlUtil extends SqlUtil {
       )} / POWER(2, ${this.sqlifyExpression(exp.$right, params)})`;
     }
     if (exp.$operator === BINARY_OPERATION_OPERATOR.CONCAT) {
-      return `${this.sqlifyExpression(exp.$left)} + ${this.sqlifyExpression(
-        exp.$right
-      )}`;
+      return `${this.sqlifyExpression(
+        exp.$left,
+        params
+      )} + ${this.sqlifyExpression(exp.$right, params)}`;
     }
     return super.sqlifyBinaryOperation(exp, params);
   }
@@ -202,7 +202,7 @@ export class MssqlSqlUtil extends SqlUtil {
       statement.$statement,
       'In while statement, do statement not found.'
     );
-    let sql = `WHILE (${this.sqlifyCondition(statement.$condition)}) `;
+    let sql = `WHILE (${this.sqlifyCondition(statement.$condition)}) \n`;
     sql += this.sqlifyStatement(statement.$statement, params);
     return sql;
   }
@@ -300,9 +300,28 @@ export class MssqlSqlUtil extends SqlUtil {
     params?: Set<Parameter>,
     parent?: SQL
   ): string {
-    return `BEGIN\n  ${statement.$statements
+    let sql = '';
+    if (statement.$declares) {
+      sql += this.sqlifyDeclare(statement.$declares) + '\n';
+    }
+    sql += `BEGIN\n  ${statement.$statements
       .map((statement) => this.sqlifyStatement(statement, params, parent))
       .join('\n  ')}\nEND`;
+    return sql;
+  }
+
+  protected sqlifyDeclare(declare: Declare): string {
+    return (
+      'DECLARE ' +
+      declare.$declares
+        .map((dec) =>
+          TableVariant.isTableVariant(dec)
+            ? this.sqlifyTableVariantDeclare(dec)
+            : this.sqlifyVariantDeclare(dec)
+        )
+        .join(', ') +
+      '\n'
+    );
   }
 
   protected sqlifyDropIndex(index: DropIndex): string {
@@ -609,7 +628,7 @@ SET IDENTITY_INSERT ${this.sqlifyObjectName(insert.$table.$name)} OFF
     let sql = '';
     if (select.$offset === undefined && select.$limit === undefined) return sql;
     if (!select.$sorts) {
-      select.orderBy(1);
+      // select.orderBy(SQL.literal(1).asc());
       sql += ' ORDER BY 1';
     }
     sql += ` OFFSET ${select.$offset || 0} ROWS`;

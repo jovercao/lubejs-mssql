@@ -4,16 +4,14 @@ import {
   DbProvider,
   ISOLATION_LEVEL,
   QueryResult,
-  SqlUtil,
 } from 'lubejs/core';
 import { toMssqlIsolationLevel } from './types';
 import {
   config as MssqlConfig,
   Connection as MssqlConn,
 } from '@jovercao/mssql';
-import { MssqlDbProvider } from './provider';
 import { doQuery } from './query';
-import { MssqlSqlOptions, MssqlSqlUtil } from './sql-util';
+import { MssqlSqlOptions } from './sql-util';
 
 const DefaultConnectOptions: MssqlConfig = {
   server: 'localhost',
@@ -25,6 +23,10 @@ const DefaultConnectOptions: MssqlConfig = {
     trustedConnection: true,
     // 设置为不自动回滚
     abortTransactionOnError: false,
+    /**
+     * 使用UTC存储日期，避免时区问题
+     */
+    useUTC: false
   },
   // 请求超时时间
   requestTimeout: 60000,

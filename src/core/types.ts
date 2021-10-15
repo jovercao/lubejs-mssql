@@ -1,5 +1,22 @@
-import mssql, { ISqlType } from '@jovercao/mssql';
-import { DbType, ISOLATION_LEVEL, Raw } from 'lubejs';
+import mssql, { ISqlType, ISqlTypeFactory } from '@jovercao/mssql';
+import {
+  Binary,
+  DbType,
+  Decimal,
+  isBinary,
+  ISOLATION_LEVEL,
+  Parameter,
+  Raw,
+  Scalar,
+  Time,
+  Uuid,
+} from 'lubejs/core';
+import {
+  formatDate,
+  formatDateTime,
+  formatIsoDateTimeLocale,
+  formatTime,
+} from './date-format';
 
 const strTypeMapps: Record<string, any> = {};
 Object.entries(mssql.TYPES).forEach(([name, dbType]) => {
@@ -38,9 +55,9 @@ export function toMssqlType(type: DbType): mssql.ISqlType {
   if (Raw.isRaw(type)) {
     return parseRawTypeToMssqlType(type.$sql);
   }
-  switch (type.name) {
+  switch (type.type) {
     case 'BINARY':
-      return mssql.VarBinary();
+      return mssql.VarBinary(type.size === DbType.MAX ? mssql.MAX : type.size);
     case 'BOOLEAN':
       return mssql.Bit();
     case 'DATE':
@@ -51,9 +68,9 @@ export function toMssqlType(type: DbType): mssql.ISqlType {
       return mssql.DateTimeOffset();
     case 'TIME':
       return mssql.Time(3);
-    case 'FLOAT':
+    case 'FLOAT32':
       return mssql.Real();
-    case 'DOUBLE':
+    case 'FLOAT64':
       return mssql.Float();
     case 'INT8':
       return mssql.TinyInt();
@@ -64,19 +81,19 @@ export function toMssqlType(type: DbType): mssql.ISqlType {
     case 'INT64':
       return mssql.BigInt();
     case 'DECIMAL':
-      return mssql.Decimal(type.precision, type.digit);
+      return mssql.Decimal(type.precision, type.scale);
     case 'STRING':
-      if (type.length === DbType.MAX) {
+      if (type.size === DbType.MAX) {
         return mssql.VarChar(mssql.MAX);
       } else {
-        return mssql.VarChar(type.length);
+        return mssql.VarChar(type.size);
       }
     case 'UUID':
       return mssql.UniqueIdentifier();
     case 'ROWFLAG':
       return mssql.BigInt();
-    case 'ARRAY':
-    case 'OBJECT':
+    case 'JSON':
+    case 'LIST':
       return mssql.NVarChar(mssql.MAX);
     default:
       throw new Error(`Unsupport data type ${type['name']}`);
@@ -101,9 +118,9 @@ export function toMssqlIsolationLevel(level: ISOLATION_LEVEL): number {
 
 export function sqlifyDbType(type: DbType | Raw): string {
   if (Raw.isRaw(type)) return type.$sql;
-  switch (type.name) {
+  switch (type.type) {
     case 'STRING':
-      return `VARCHAR(${type.length === DbType.MAX ? 'MAX' : type.length})`;
+      return `VARCHAR(${type.size === DbType.MAX ? 'MAX' : type.size})`;
     case 'INT8':
       return 'TINYINT';
     case 'INT16':
@@ -113,7 +130,7 @@ export function sqlifyDbType(type: DbType | Raw): string {
     case 'INT64':
       return 'BIGINT';
     case 'BINARY':
-      return `VARBINARY(${type.length === 0 ? 'MAX' : type.length})`;
+      return `VARBINARY(${type.size === 0 ? 'MAX' : type.size})`;
     case 'BOOLEAN':
       return 'BIT';
     case 'DATE':
@@ -124,21 +141,21 @@ export function sqlifyDbType(type: DbType | Raw): string {
       return 'DATETIMEOFFSET(7)';
     case 'TIME':
       return 'TIME(3)';
-    case 'FLOAT':
+    case 'FLOAT32':
       return 'REAL';
-    case 'DOUBLE':
+    case 'FLOAT64':
       return 'FLOAT(53)';
     case 'DECIMAL':
-      return `DECIMAL(${type.precision}, ${type.digit})`;
+      return `DECIMAL(${type.precision}, ${type.scale})`;
     case 'UUID':
       return 'UNIQUEIDENTIFIER';
-    case 'OBJECT':
-    case 'ARRAY':
+    case 'JSON':
+    case 'LIST':
       return 'NVARCHAR(MAX)';
     case 'ROWFLAG':
       return 'TIMESTAMP';
     default:
-      throw new Error(`Unsupport data type ${type['name']}`);
+      throw new Error(`Unsupport data type ${type['type']}`);
   }
 }
 
@@ -158,8 +175,8 @@ const rawToDbTypeMap: Record<string, keyof typeof DbType> = {
   TINYINT: 'int8',
   DECIMAL: 'decimal',
   NUMERIC: 'decimal',
-  FLOAT: 'float',
-  REAL: 'double',
+  REAL: 'float32',
+  FLOAT: 'float64',
   DATE: 'date',
   TIME: 'time',
   DATETIME: 'datetime',
@@ -185,19 +202,189 @@ export function parseRawDbType(type: string): DbType {
   }
 
   const dbTypeFactory = DbType[dbTypeKey];
-  if (typeof dbTypeFactory === 'object') {
-    return dbTypeFactory as DbType;
-  }
   if (matched.groups!.max) {
     return Reflect.apply(dbTypeFactory as Function, DbType, [DbType.MAX]);
   }
-  if (matched.groups!.p2 !== undefined) {
-    return Reflect.apply(dbTypeFactory as Function, DbType, [
-      Number.parseInt(matched.groups!.p1),
-      Number.parseInt(matched.groups!.p2),
-    ]);
-  }
   return Reflect.apply(dbTypeFactory as Function, DbType, [
     Number.parseInt(matched.groups!.p1),
+    Number.parseInt(matched.groups!.p2),
   ]);
+}
+
+/**
+ * 编译字面量
+ */
+export function sqlifyLiteral(value: Scalar, dbType?: DbType): string {
+  if (!dbType) {
+    return literalToSql(value);
+    // dbType = Literal.parseValueType(value);
+  }
+  // 为方便JS，允许undefined进入，留给TS语法检查
+  if (value === undefined) {
+    throw new Error(`Unspport db value undefined, pls use null instead it.`);
+  }
+  if (value === null) {
+    return 'NULL';
+  }
+
+  switch (dbType.type) {
+    case 'STRING':
+      return "N'" + (value as string).replace(/'/g, "''") + "'";
+    case 'INT8':
+      return `CAST(${value.toString()} AS TINYINT)`;
+    case 'INT16':
+      return `CAST(${value.toString()} AS SMALLINT)`;
+    case 'INT32':
+      return `CAST(${value.toString()} AS INT)`;
+    case 'INT64':
+      return `CAST(${value.toString()} AS BIGINT)`;
+    case 'BOOLEAN':
+      return `CAST(${value ? '1' : '0'} AS BIT)`;
+    case 'DATE':
+      return `CAST('${formatDate(value as Date)}' AS DATE)`;
+    case 'TIME':
+      return `CAST('${
+        value instanceof Time ? value?.toString() : formatTime(value as Date)
+      }' AS TIME)`;
+    case 'DATETIME':
+      return `CAST('${formatDateTime(value as Date)}' AS DATETIME)`;
+    case 'DATETIMEOFFSET':
+      return `CAST('${formatIsoDateTimeLocale(
+        value as Date
+      )}' AS DATETIMEOFFSET)`;
+    case 'FLOAT32':
+      return `CAST(${value.toString()} AS REAL)`;
+    case 'FLOAT64':
+      return `CAST(${value.toString()} AS FLOAT)`;
+    case 'DECIMAL':
+      return `CAST(${value.toString()} AS DECIMAL(${dbType.precision}, ${
+        dbType.scale
+      }))`;
+    case 'ROWFLAG':
+    case 'BINARY':
+      return '0x' + Buffer.from(value as Binary).toString('hex');
+    case 'UUID':
+      return `CAST(0x${Buffer.from(value as Uuid).toString(
+        'hex'
+      )} AS UNIQUEIDENTIFIER)`;
+    case 'JSON':
+    case 'LIST':
+      return JSON.stringify(value);
+  }
+}
+
+function literalToSql(value: Scalar): string {
+  // 为方便JS，允许undefined进入，留给TS语法检查
+  if (value === undefined) {
+    throw new Error(`Unspport db value undefined, pls use null instead it.`);
+  }
+  if (value === null) {
+    return 'NULL';
+  }
+
+  const type = typeof value;
+
+  if (type === 'string') {
+    return "N'" + (value as string).replace(/'/g, "''") + "'";
+  }
+
+  if (type === 'number' || type === 'bigint') {
+    return (value as number | bigint).toString(10);
+  }
+
+  if (type === 'boolean') {
+    return value ? '1' : '0';
+  }
+
+  if (value instanceof Date) {
+    return "'" + formatIsoDateTimeLocale(value) + "'";
+  }
+
+  if (value instanceof Uuid) {
+    return '0x' + Buffer.from(value).toString('hex');
+  }
+
+  if (value instanceof Time) {
+    return "'" + value.toString() + "'";
+  }
+
+  if (value instanceof Decimal) {
+    return value.toString();
+  }
+
+  if (isBinary(value)) {
+    return '0x' + Buffer.from(value).toString('hex');
+  }
+
+  return "'" + JSON.stringify(value) + "'";
+}
+
+/**
+ * 使mssql返回的数据类型符合lubejs类
+ */
+export function normalDatas(datas: mssql.IRecordSet<any>): any[] {
+  return datas.map((row) => {
+    for (const [column, { type }] of Object.entries(datas.columns)) {
+      row[column] = normalValue(row[column], type);
+    }
+  });
+}
+
+export function isSqlType(
+  type: ISqlType | (() => mssql.ISqlType),
+  expect: ISqlTypeFactory
+): boolean {
+  return type === expect || (type as ISqlType).type === expect;
+}
+
+export function prepareParameter(request: mssql.Request, p: Parameter) {
+  let value: any = p.value;
+  if (p.type.type === 'TIME') {
+    if (p.value && p.value instanceof Time) {
+      const date = new Date(1970, 0);
+      date.setHours(p.value.hours);
+      date.setMinutes(p.value.minutes);
+      date.setSeconds(p.value.seconds);
+      date.setMilliseconds(p.value.milliSeconds);
+      value = date;
+    }
+  }
+
+  const mssqlType: mssql.ISqlType = toMssqlType(p.type);
+  if (p.direction === 'IN') {
+    request.input(p.name, mssqlType, value);
+  } else {
+    if (!p.type) {
+      throw new Error('输出参数必须指定参数类型！');
+    }
+    request.output(p.name, mssqlType, value);
+  }
+}
+
+export function normalValue(
+  value: any,
+  type: ISqlType | (() => mssql.ISqlType)
+): any {
+  if (value === undefined && value === null) {
+    return value;
+  }
+  if (isSqlType(type, mssql.BigInt)) {
+    return BigInt(value);
+  } else if (isSqlType(type, mssql.Time)) {
+    if (value instanceof Date) {
+      return new Time(
+        value.getHours(),
+        value.getMinutes(),
+        value.getSeconds(),
+        value.getMilliseconds()
+      );
+    } else {
+      return new Time(value);
+    }
+  } else if (isSqlType(type, mssql.Decimal) || isSqlType(type, mssql.Numeric)) {
+    return new Decimal(value);
+  } else if (isSqlType(type, mssql.UniqueIdentifier)) {
+    return new Uuid(value);
+  }
+  return value;
 }

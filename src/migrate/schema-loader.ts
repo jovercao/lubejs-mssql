@@ -16,9 +16,7 @@ import {
   SchemaLoader,
   SQL,
   DbType,
-  CompatiableObjectName,
   ObjectName,
-  Expression,
 } from 'lubejs';
 import { database_principal_id } from '../core/build-in';
 import { fullType } from './util';

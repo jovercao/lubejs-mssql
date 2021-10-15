@@ -2,7 +2,7 @@ import {
   MigrateBuilder,
   Statement,
   SQL,
-  CompatibleExpression,
+  XExpression,
   Scalar,
   Condition,
   SqlUtil,
@@ -10,7 +10,7 @@ import {
   CreateDatabase,
   DropDatabase,
   AlterDatabase,
-  CompatiableObjectName,
+  XObjectName,
   DbProvider,
   Expression,
 } from 'lubejs';
@@ -25,7 +25,7 @@ export class MssqlMigrateBuilder extends MigrateBuilder {
     this.sqlUtil = provider.sqlUtil;
   }
 
-  throw(errmsg: CompatibleExpression<string>): Statement {
+  throw(errmsg: XExpression<string>): Statement {
     return SQL.raw(
       `RAISERROR(${
         typeof errmsg === 'string'
@@ -35,7 +35,7 @@ export class MssqlMigrateBuilder extends MigrateBuilder {
     );
   }
 
-  renameSequence(name: CompatiableObjectName, newName: string): Statement {
+  renameSequence(name: XObjectName, newName: string): Statement {
     return sp_rename(this.sqlUtil.sqlifyObjectName(name), newName, 'OBJECT');
   }
 
@@ -63,38 +63,38 @@ export class MssqlMigrateBuilder extends MigrateBuilder {
   dropSchemaComment(name: string): Statement {
     return this.setSchemaComment(name, null);
   }
-  dropSequenceComment(name: CompatiableObjectName<string>): Statement {
+  dropSequenceComment(name: XObjectName<string>): Statement {
     return this.setSequenceComment(name, null);
   }
-  dropProcedureComment(name: CompatiableObjectName<string>): Statement {
+  dropProcedureComment(name: XObjectName<string>): Statement {
     return this.setProcedureComment(name, null);
   }
-  dropFunctionComment(name: CompatiableObjectName<string>): Statement {
+  dropFunctionComment(name: XObjectName<string>): Statement {
     return this.setFunctionComment(name, null);
   }
-  dropTableComment(name: CompatiableObjectName<string>): Statement {
+  dropTableComment(name: XObjectName<string>): Statement {
     return this.setTableComment(name, null);
   }
   dropColumnComment(
-    table: CompatiableObjectName<string>,
+    table: XObjectName<string>,
     name: string
   ): Statement {
     return this.setColumnComment(table, name, null);
   }
   dropIndexComment(
-    table: CompatiableObjectName<string>,
+    table: XObjectName<string>,
     name: string
   ): Statement {
     return this.setIndexComment(table, name, null);
   }
   dropConstraintComment(
-    table: CompatiableObjectName<string>,
+    table: XObjectName<string>,
     name: string
   ): Statement {
     return this.setConstraintComment(table, name, null);
   }
   setAutoRowflag(
-    table: CompatiableObjectName<string>,
+    table: XObjectName<string>,
     column: string
   ): Statement {
     return SQL.block(
@@ -111,7 +111,7 @@ export class MssqlMigrateBuilder extends MigrateBuilder {
     );
   }
   dropAutoRowflag(
-    table: CompatiableObjectName<string>,
+    table: XObjectName<string>,
     column: string
   ): Statement {
     const tempColumn = '__' + column;
@@ -136,9 +136,9 @@ export class MssqlMigrateBuilder extends MigrateBuilder {
   private readonly sqlUtil: SqlUtil;
 
   setDefaultValue(
-    table: CompatiableObjectName<string>,
+    table: XObjectName<string>,
     column: string,
-    defaultValue: CompatibleExpression<Scalar>
+    defaultValue: XExpression<Scalar>
   ): Statement {
     return SQL.raw(`
 DECLARE @ConstaintName varchar(128);
@@ -164,7 +164,7 @@ ALTER TABLE ${this.sqlUtil.sqlifyObjectName(table)} ADD DEFAULT (${
   }
 
   dropDefaultValue(
-    table: CompatiableObjectName<string>,
+    table: XObjectName<string>,
     column: string
   ): Statement {
     return SQL.raw(`
@@ -224,7 +224,7 @@ END
   // }
 
   addCheckConstaint(
-    table: CompatiableObjectName<string>,
+    table: XObjectName<string>,
     sql: Condition,
     name?: string
   ): Statement {
@@ -234,14 +234,14 @@ END
   }
 
   dropCheckConstaint(
-    table: CompatiableObjectName<string>,
+    table: XObjectName<string>,
     name: string
   ): Statement {
     return SQL.alterTable(table).drop((builder) => builder.check(name));
   }
 
   setIdentity(
-    table: CompatiableObjectName<string>,
+    table: XObjectName<string>,
     column: string,
     startValue: number,
     increment: number
@@ -260,7 +260,7 @@ END
   }
 
   dropIdentity(
-    table: CompatiableObjectName<string>,
+    table: XObjectName<string>,
     column: string
   ): Statement {
     // const sql = this.copyNewColumn(table, column)
@@ -278,7 +278,7 @@ END
   }
 
   setProcedureComment(
-    name: CompatiableObjectName,
+    name: XObjectName,
     comment: string | null
   ): Statement {
     let sql = formatSql`
@@ -305,7 +305,7 @@ EXEC sys.sp_addextendedproperty ${COMMENT_EXTEND_PROPERTY_NAME}, ${comment}, 'SC
   }
 
   setFunctionComment(
-    name: CompatiableObjectName,
+    name: XObjectName,
     comment: string | null
   ): Statement {
     let sql = formatSql`
@@ -332,7 +332,7 @@ EXEC sys.sp_addextendedproperty ${COMMENT_EXTEND_PROPERTY_NAME}, ${comment}, 'SC
   }
 
   setSequenceComment(
-    name: CompatiableObjectName,
+    name: XObjectName,
     comment: string | null
   ): Statement {
     let sql = formatSql`
@@ -359,7 +359,7 @@ EXEC sys.sp_addextendedproperty ${COMMENT_EXTEND_PROPERTY_NAME}, ${comment}, 'SC
   }
 
   setTableComment(
-    name: CompatiableObjectName,
+    name: XObjectName,
     comment: string | null
   ): Statement {
     let sql = formatSql`
@@ -386,7 +386,7 @@ EXEC sys.sp_addextendedproperty ${COMMENT_EXTEND_PROPERTY_NAME}, ${comment}, 'SC
   }
 
   setViewComment(
-    name: CompatiableObjectName,
+    name: XObjectName,
     comment: string | null
   ): Statement {
     let sql = formatSql`
@@ -413,7 +413,7 @@ EXEC sys.sp_addextendedproperty ${COMMENT_EXTEND_PROPERTY_NAME}, ${comment}, 'SC
   }
 
   setColumnComment(
-    table: CompatiableObjectName,
+    table: XObjectName,
     name: string,
     comment: string | null
   ): Statement {
@@ -446,7 +446,7 @@ EXEC sys.sp_addextendedproperty ${COMMENT_EXTEND_PROPERTY_NAME}, ${comment}, 'SC
   }
 
   setIndexComment(
-    table: CompatiableObjectName,
+    table: XObjectName,
     name: string,
     comment: string | null
   ): Statement {
@@ -479,7 +479,7 @@ EXEC sys.sp_addextendedproperty ${COMMENT_EXTEND_PROPERTY_NAME}, ${comment}, 'SC
   }
 
   setConstraintComment(
-    table: CompatiableObjectName<string>,
+    table: XObjectName<string>,
     name: string,
     comment: string | null
   ): Statement {
@@ -549,12 +549,12 @@ EXEC sp_addextendedproperty ${COMMENT_EXTEND_PROPERTY_NAME}, ${comment}, 'SCHEMA
     return SQL.raw(sql);
   }
 
-  renameTable(name: CompatiableObjectName, newName: string): Statement {
+  renameTable(name: XObjectName, newName: string): Statement {
     return sp_rename(this.sqlUtil.sqlifyObjectName(name), newName);
   }
 
   renameColumn(
-    table: CompatiableObjectName,
+    table: XObjectName,
     name: string,
     newName: string
   ): Statement {
@@ -565,12 +565,12 @@ EXEC sp_addextendedproperty ${COMMENT_EXTEND_PROPERTY_NAME}, ${comment}, 'SCHEMA
     );
   }
 
-  renameView(name: CompatiableObjectName, newName: string): Statement {
+  renameView(name: XObjectName, newName: string): Statement {
     return sp_rename(this.sqlUtil.sqlifyObjectName(name), newName);
   }
 
   renameIndex(
-    table: CompatiableObjectName,
+    table: XObjectName,
     name: string,
     newName: string
   ): Statement {
@@ -581,11 +581,11 @@ EXEC sp_addextendedproperty ${COMMENT_EXTEND_PROPERTY_NAME}, ${comment}, 'SCHEMA
     );
   }
 
-  renameProcedure(name: CompatiableObjectName, newName: string): Statement {
+  renameProcedure(name: XObjectName, newName: string): Statement {
     return sp_rename(this.sqlUtil.sqlifyObjectName(name), newName);
   }
 
-  renameFunction(name: CompatiableObjectName, newName: string): Statement {
+  renameFunction(name: XObjectName, newName: string): Statement {
     return sp_rename(this.sqlUtil.sqlifyObjectName(name), newName);
   }
 }

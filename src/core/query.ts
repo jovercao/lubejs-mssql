@@ -1,4 +1,4 @@
-import mssql from '@jovercao/mssql';
+import mssql, { Connection as MssqlConn } from '@jovercao/mssql';
 import {
   SqlOptions,
   Parameter,
@@ -8,8 +8,7 @@ import {
   Uuid,
   Time,
 } from 'lubejs';
-import { toMssqlType } from './types';
-import { Connection as MssqlConn } from '@jovercao/mssql';
+import { normalDatas, normalValue, prepareParameter } from './types';
 
 export async function doQuery(
   conn: MssqlConn,
@@ -19,24 +18,8 @@ export async function doQuery(
 ): Promise<QueryResult<any, any, any>> {
   const request = await conn.request();
   if (params) {
-    params.forEach(({ name, value, type, direction = 'IN' }) => {
-      const mssqlType: mssql.ISqlType = toMssqlType(type);
-      if (direction === 'IN') {
-        if (type) {
-          request.input(name, mssqlType, value);
-        } else {
-          request.input(name, value);
-        }
-      } else {
-        if (!type) {
-          throw new Error('输出参数必须指定参数类型！');
-        }
-        if (value === undefined) {
-          request.output(name, mssqlType);
-        } else {
-          request.output(name, mssqlType, value);
-        }
-      }
+    params.forEach((p) => {
+      prepareParameter(request, p);
     });
   }
   let res: mssql.IResult<any>;
@@ -55,8 +38,9 @@ export async function doQuery(
   if (params) {
     Object.entries(res.output).forEach(([name, value]) => {
       const p = params.find((p) => p.name === name)!;
+      res.output[name] = normalValue(value, request.parameters[name].type);
       // 回写输出参数
-      p.value = value as Scalar;
+      p.value = res.output[name] as Scalar;
       if (p.name === options.returnParameterName) {
         result.returnValue = value;
       }
@@ -71,48 +55,4 @@ export async function doQuery(
 mssql.map.register(Number, mssql.BigInt);
 mssql.map.register(Decimal, mssql.Decimal);
 mssql.map.register(Uuid, mssql.UniqueIdentifier);
-
-/**
- * mssql 的类型不足，在此处转换
- */
-function normalDatas(datas: mssql.IRecordSet<any>): any[] {
-  for (const [column, { type }] of Object.entries(datas.columns)) {
-    // HACK 此处使用mssql私有属性 SqlType declaration，将来mssql库更新可能会导致问题
-    const declare = Reflect.get(type, 'declaration')?.toLowerCase?.();
-    if (!declare) {
-      throw new Error(`Declare`);
-    }
-
-    if (declare === 'bigint') {
-      for (const row of datas) {
-        const value = row[column] as string;
-        if (value !== undefined && value !== null) {
-          row[column] = BigInt(value);
-        }
-      }
-    } else if (declare === 'time') {
-      for (const row of datas) {
-        const value = row[column] as string;
-        if (value !== undefined && value !== null) {
-          row[column] = new Time(value);
-        }
-      }
-    } else if (declare === 'decimal' || declare === 'numeric') {
-      for (const row of datas) {
-        const value = row[column] as string;
-        if (value !== undefined && value !== null) {
-          row[column] = new Decimal(value);
-        }
-      }
-    } else if (declare === 'uniqueidentifier') {
-      for (const row of datas) {
-        const value = row[column] as string;
-        if (value !== undefined && value !== null) {
-          row[column] = new Uuid(value);
-        }
-      }
-    }
-  }
-  Reflect.deleteProperty(datas, 'columns');
-  return datas;
-}
+mssql.map.register(Time, mssql.Time);
