@@ -84,9 +84,9 @@ export function toMssqlType(type: DbType): mssql.ISqlType {
       return mssql.Decimal(type.precision, type.scale);
     case 'STRING':
       if (type.size === DbType.MAX) {
-        return mssql.VarChar(mssql.MAX);
+        return mssql.NVarChar(mssql.MAX);
       } else {
-        return mssql.VarChar(type.size);
+        return mssql.NVarChar(type.size);
       }
     case 'UUID':
       return mssql.UniqueIdentifier();
@@ -267,7 +267,7 @@ export function sqlifyLiteral(value: Scalar, dbType?: DbType): string {
       return `CAST('${(value as Uuid).toString()}' AS UNIQUEIDENTIFIER)`;
     case 'JSON':
     case 'LIST':
-      return "'" + JSON.stringify(value) + "'";
+      return "'" + JSON_TYPE_PATTERN + JSON.stringify(value) + "'";
   }
 }
 
@@ -314,7 +314,8 @@ function literalToSql(value: Scalar): string {
     return '0x' + Buffer.from(value).toString('hex');
   }
 
-  return "'" + JSON.stringify(value) + "'";
+  // 添加JSON类型标记，以便序列化器识别该标记
+  return "'" + JSON_TYPE_PATTERN + JSON.stringify(value) + "'";
 }
 
 /**
@@ -370,6 +371,7 @@ export function prepareParameter(request: mssql.Request, p: Parameter) {
     request.output(p.name, mssqlType, value);
   }
 }
+export const JSON_TYPE_PATTERN = '';
 
 export function normalValue(
   value: any,
@@ -378,7 +380,21 @@ export function normalValue(
   if (value === undefined && value === null) {
     return value;
   }
-  if (isSqlType(type, mssql.BigInt)) {
+  if (isSqlType(type, mssql.NVarChar) || isSqlType(type, mssql.VarChar)) {
+    // 如果可能是json，则尝试反序列化JSON对象{}
+    if (
+      // Json类型
+      (value.startsWith(JSON_TYPE_PATTERN + '{') && value.endsWith('}')) ||
+      // List类型
+      (value.startsWith(JSON_TYPE_PATTERN + '[') && value.endsWith(']'))
+    ) {
+      try {
+        return JSON.parse(value.substring(JSON_TYPE_PATTERN.length));
+      } catch {
+        return value;
+      }
+    }
+  } else if (isSqlType(type, mssql.BigInt)) {
     return BigInt(value);
   } else if (isSqlType(type, mssql.Time)) {
     if (value instanceof Date) {

@@ -38,9 +38,9 @@ export async function doQuery(
   if (params) {
     Object.entries(res.output).forEach(([name, value]) => {
       const p = params.find((p) => p.name === name)!;
-      res.output[name] = normalValue(value, request.parameters[name].type);
+      value = normalValue(value, request.parameters[name].type);
       // 回写输出参数
-      p.value = res.output[name] as Scalar;
+      p.value = res.output[name] = value;
       if (p.name === options.returnParameterName) {
         result.returnValue = value;
       }
