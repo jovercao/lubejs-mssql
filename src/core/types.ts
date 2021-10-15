@@ -295,11 +295,11 @@ function literalToSql(value: Scalar): string {
   }
 
   if (value instanceof Date) {
-    return "'" + formatIsoDateTimeLocale(value) + "'";
+    return "'" + formatDateTime(value) + "'";
   }
 
   if (value instanceof Uuid) {
-    return '0x' + Buffer.from(value).toString('hex');
+    return "'" + value.toString() + "'";
   }
 
   if (value instanceof Time) {

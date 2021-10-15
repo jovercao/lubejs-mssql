@@ -52,7 +52,6 @@ import {
   object_id,
   db_name,
   schema_name,
-  database_principal_id,
   db_id,
 } from './build-in';
 import {

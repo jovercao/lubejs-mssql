@@ -52,6 +52,10 @@ import {
   Variant,
   PARAMETER_DIRECTION,
   Declare,
+  Expression,
+  Literal,
+  ScalarFuncInvoke,
+  StandardExpression,
 } from 'lubejs/core';
 import { sqlifyDbType, parseRawDbType, sqlifyLiteral } from './types';
 
@@ -110,6 +114,35 @@ export class MssqlSqlUtil extends SqlUtil {
 
   constructor(provider: DbProvider, options: MssqlSqlOptions | undefined) {
     super(provider, Object.assign({}, DefaultSqlOptions, options));
+  }
+  protected sqlifyExecuteArgumentList(
+    args: Expression<Scalar>[],
+    params?: Set<Parameter<Scalar, string>>,
+    parent?: SQL
+  ): string {
+    return args
+      .map((ast) => {
+        if (
+          ScalarFuncInvoke.isScalarFuncInvoke(ast) ||
+          (StandardExpression.isStandardExpression(ast) &&
+            ast.$name === SQL.std.convert.name)
+        ) {
+          throw new Error(
+            `Mssql not allowed invoke/convert expression in store procedure execute arguments.`
+          );
+        }
+        // 存储过程参数中不能附带类型
+        if (Literal.isLiteral(ast)) {
+          // TIPS: 存储过程调用中，不允许出现类型转换及函数调用等
+          return this.sqlifyLiteral(ast.$value);
+        }
+        let sql = this.sqlifyExpression(ast, params, parent);
+        if (Parameter.isParameter(ast)) {
+          sql += ' ' + this.sqlifyDirection(ast.direction);
+        }
+        return sql;
+      })
+      .join(', ');
   }
 
   private parseQuotedName(name: string): string {
