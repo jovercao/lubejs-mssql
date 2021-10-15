@@ -264,12 +264,10 @@ export function sqlifyLiteral(value: Scalar, dbType?: DbType): string {
     case 'BINARY':
       return '0x' + Buffer.from(value as Binary).toString('hex');
     case 'UUID':
-      return `CAST(0x${Buffer.from(value as Uuid).toString(
-        'hex'
-      )} AS UNIQUEIDENTIFIER)`;
+      return `CAST('${(value as Uuid).toString()}' AS UNIQUEIDENTIFIER)`;
     case 'JSON':
     case 'LIST':
-      return JSON.stringify(value);
+      return "'" + JSON.stringify(value) + "'";
   }
 }
 
@@ -339,14 +337,26 @@ export function isSqlType(
 
 export function prepareParameter(request: mssql.Request, p: Parameter) {
   let value: any = p.value;
-  if (p.type.type === 'TIME') {
-    if (p.value && p.value instanceof Time) {
-      const date = new Date(1970, 0);
-      date.setHours(p.value.hours);
-      date.setMinutes(p.value.minutes);
-      date.setSeconds(p.value.seconds);
-      date.setMilliseconds(p.value.milliSeconds);
-      value = date;
+  if (value !== undefined && value !== null) {
+    switch (p.type.type) {
+      case 'TIME':
+        if (value instanceof Time) {
+          const date = new Date(1970, 0);
+          date.setHours(value.hours);
+          date.setMinutes(value.minutes);
+          date.setSeconds(value.seconds);
+          date.setMilliseconds(value.milliSeconds);
+          value = date;
+        }
+        break;
+      case 'JSON':
+      case 'LIST':
+        value = JSON.stringify(value);
+        break;
+      case 'DECIMAL':
+      case 'UUID':
+        value = value.toString();
+        break;
     }
   }
 

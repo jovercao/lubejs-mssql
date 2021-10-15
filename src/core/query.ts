@@ -7,7 +7,7 @@ import {
   Decimal,
   Uuid,
   Time,
-} from 'lubejs';
+} from 'lubejs/core';
 import { normalDatas, normalValue, prepareParameter } from './types';
 
 export async function doQuery(
