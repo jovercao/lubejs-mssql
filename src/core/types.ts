@@ -215,13 +215,12 @@ export function parseRawDbType(type: string): DbType {
  * 编译字面量
  */
 export function sqlifyLiteral(value: Scalar, dbType?: DbType): string {
+  if (value === undefined) {
+    throw new Error(`Unspport db value undefined, pls use null instead it.`);
+  }
   if (!dbType) {
     return literalToSql(value);
     // dbType = Literal.parseValueType(value);
-  }
-  // 为方便JS，允许undefined进入，留给TS语法检查
-  if (value === undefined) {
-    throw new Error(`Unspport db value undefined, pls use null instead it.`);
   }
   if (value === null) {
     return 'NULL';
@@ -295,15 +294,15 @@ function literalToSql(value: Scalar): string {
   }
 
   if (value instanceof Date) {
-    return "'" + formatDateTime(value) + "'";
+    return "CAST('" + formatIsoDateTimeLocale(value) + "' AS DATETIMEOFFSET)";
   }
 
   if (value instanceof Uuid) {
-    return "'" + value.toString() + "'";
+    return "CAST('" + value.toString() + "' AS UNIQUEIDENTIFIER)";
   }
 
   if (value instanceof Time) {
-    return "'" + value.toString() + "'";
+    return "CAST('" + value.toString() + "' AS TIME)";
   }
 
   if (value instanceof Decimal) {
@@ -377,7 +376,7 @@ export function normalValue(
   value: any,
   type: ISqlType | (() => mssql.ISqlType)
 ): any {
-  if (value === undefined && value === null) {
+  if (value === undefined || value === null) {
     return value;
   }
   if (isSqlType(type, mssql.NVarChar) || isSqlType(type, mssql.VarChar)) {

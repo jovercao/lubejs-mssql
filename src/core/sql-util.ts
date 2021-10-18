@@ -337,7 +337,7 @@ export class MssqlSqlUtil extends SqlUtil {
     if (statement.$declares) {
       sql += this.sqlifyDeclare(statement.$declares) + '\n';
     }
-    sql += `BEGIN\n  ${statement.$statements
+    sql += `BEGIN\n  ${statement.$body
       .map((statement) => this.sqlifyStatement(statement, params, parent))
       .join('\n  ')}\nEND`;
     return sql;
