@@ -1,0 +1,45 @@
+{
+  "name": "lubejs-mssql",
+  "version": "3.0.0-preview07",
+  "description": "The lubejs driver for mssql.",
+  "main": "index.js",
+  "engines": {
+    "node": ">=12.0"
+  },
+  "files": [
+    "**/*.js",
+    "**/*.ts"
+  ],
+  "scripts": {
+    "build": "pnpm run clean && pnpm run lint && tsc && pnpm run pack",
+    "clean": "pwsh -c if (test-path dist) { rm -r -force dist }",
+    "pack": "pwsh -c cp README.md dist/; cp README-zh_CN.md dist/; cp package.json dist/; cd dist; pnpm pack;",
+    "lint": "eslint --fix ./src --ext .ts"
+  },
+  "keywords": [
+    "mssql",
+    "lubejs",
+    "lube",
+    "js2sql",
+    "sql",
+    "sqlserver",
+    "mssqlserver"
+  ],
+  "author": "jover",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@jovercao/mssql": "^7.2.1-jover.9"
+  },
+  "devDependencies": {
+    "@types/mssql": "^6.0.8",
+    "@types/node": "^14.17.9",
+    "@typescript-eslint/eslint-plugin": "^4.29.1",
+    "@typescript-eslint/parser": "^4.4.1",
+    "eslint": "^7.32.0",
+    "tslib": "^2.3.1",
+    "typescript": "^4.3.5"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/"
+  }
+}
