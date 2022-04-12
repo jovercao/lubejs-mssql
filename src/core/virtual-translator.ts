@@ -69,6 +69,7 @@ import {
   VirtualTranslator,
   Field,
   Sort,
+  Literal,
 } from 'lubejs/core';
 
 export class MssqlVirtualTranslator implements VirtualTranslator {
@@ -606,10 +607,20 @@ export class MssqlVirtualTranslator implements VirtualTranslator {
   nextValue<T extends Numeric>(
     sequenceName: XExpression<string>
   ): Expression<T> {
+    const name = Expression.ensureExpression<string>(sequenceName);
+    if (!Literal.isLiteral(name)) {
+      throw new Error(`Then sequenceName is only allowed literial string.`);
+    }
     return SQL.raw(
-      `NEXT VALUE FOR ${this.sqlifier.sqlifyExpression(
-        Expression.ensureExpression(sequenceName)
+      `NEXT VALUE FOR ${this.sqlifier.sqlifyObjectName(
+        this.sqlifier.parseObjectName(name.$value as string)
       )}`
     );
+    //     const name = Expression.ensureExpression<string>(sequenceName);
+    //     return SQL.raw(
+    //       `DECLARE @__LUBE_TMP_SQL___ NVARCHAR(2000)
+    // SET @__LUBE_TMP_SQL___ = N'SELECT NEXT VALUE FOR ' + ${this.sqlifier.sqlifyExpression(name)}
+    // EXECUTE(@__LUBE_TMP_SQL___)
+    // `);
   }
 }
