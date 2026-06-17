@@ -161,7 +161,7 @@ export class MssqlSchemaLoader extends SchemaLoader {
           .and(p.class.eq(1))
           .and(p.name.eq('MS_Description'))
       )
-      .where(v.type.eq('U'));
+      .where(v.type.eq('V'));
     if (schema) {
       sql.andWhere(s.name.eq(schema));
     }
@@ -696,7 +696,7 @@ export class MssqlSchemaLoader extends SchemaLoader {
           .and(p.class.eq(1))
           .and(p.name.eq('MS_Description'))
       )
-      .where(and(fn.type.eq('U'), fn.type.eq('FN')));
+      .where(fn.type.in('FN', 'IF', 'TF', 'FS', 'FT'));
     if (schema) {
       sql.andWhere(s.name.eq(schema));
     }
@@ -766,7 +766,7 @@ export class MssqlSchemaLoader extends SchemaLoader {
           .and(p.class.eq(1))
           .and(p.name.eq('MS_Description'))
       )
-      .where(proc.type.eq('U'));
+      .where(proc.type.in('P', 'PC'));
     if (schema) {
       sql.andWhere(s.name.eq(schema));
     }
@@ -878,9 +878,16 @@ export class MssqlSchemaLoader extends SchemaLoader {
           .and(p.class.eq(1))
           .and(p.name.eq('MS_Description'))
       )
-      .where(seq.type.eq('FN'));
-    if (schema) sql.andWhere(s.name.eq(schema));
-    if (name) sql.andWhere(seq.name.eq(name));
+    if (schema) {
+      sql.where(s.name.eq(schema));
+    }
+    if (name) {
+      if (schema) {
+        sql.andWhere(seq.name.eq(name));
+      } else {
+        sql.where(seq.name.eq(name));
+      }
+    }
     const result = (await this.connection.query(sql)).rows;
     const functions: SequenceSchema[] = result.map((row) => {
       const { type_name, type_precision, type_scale, ...datas } = row;
