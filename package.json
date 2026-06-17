@@ -28,7 +28,8 @@
   "author": "jover",
   "license": "Apache-2.0",
   "dependencies": {
-    "@jovercao/mssql": "^7.2.1-jover.9"
+    "@jovercao/mssql": "^7.2.1-jover.9",
+    "lubejs": "file:../lubejs/dist/lubejs-3.0.0-preview08.tgz"
   },
   "devDependencies": {
     "@types/mssql": "^6.0.8",
