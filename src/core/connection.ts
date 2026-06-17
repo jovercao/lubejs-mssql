@@ -4,6 +4,7 @@ import {
   DbProvider,
   ISOLATION_LEVEL,
   QueryResult,
+  SqlCommand,
 } from 'lubejs/core';
 import {
   isolationLevelToTSQL,
@@ -104,38 +105,35 @@ export class MssqlConnection extends Connection {
   private _connection?: MssqlConn;
   private _mssqlOptions?: MssqlConfig;
 
-  public readonly options!: MssqlConnectOptions;
+  public override readonly options!: MssqlConnectOptions;
 
   protected async doBeginTrans(isolationLevel: ISOLATION_LEVEL): Promise<void> {
     // await this._connection!.beginTrans(toMssqlIsolationLevel(isolationLevel));
-    await this.doQuery(
-      `SET TRANSACTION ISOLATION LEVEL ${isolationLevelToTSQL(
-        isolationLevel
-      )};BEGIN TRANSACTION;`,
-      undefined,
+    await this.runCommand(
+      {
+        sql: `SET TRANSACTION ISOLATION LEVEL ${isolationLevelToTSQL(
+          isolationLevel
+        )};BEGIN TRANSACTION;`,
+      },
       true
     );
   }
 
   protected async createSavePoint(id: number): Promise<void> {
-    await this.doQuery('SAVE TRANSACTION ___trans___' + id, undefined, true);
+    await this.runCommand({ sql: 'SAVE TRANSACTION ___trans___' + id }, true);
   }
 
   protected async rollbackSavePoint(id: number): Promise<void> {
-    await this.doQuery(
-      'ROLLBACK TRANSACTION ___trans___' + id,
-      undefined,
-      true
-    );
+    await this.runCommand({ sql: 'ROLLBACK TRANSACTION ___trans___' + id }, true);
   }
 
   protected async doCommit(): Promise<void> {
-    await this.doQuery(`COMMIT TRANSACTION`, undefined, true);
+    await this.runCommand({ sql: `COMMIT TRANSACTION` }, true);
     // return this._connection!.commit();
   }
 
   protected async doRollback(): Promise<void> {
-    await this.doQuery(`ROLLBACK TRANSACTION`, undefined, true);
+    await this.runCommand({ sql: `ROLLBACK TRANSACTION` }, true);
     // return this._connection!.rollback();
   }
 
@@ -163,9 +161,8 @@ export class MssqlConnection extends Connection {
     );
   }
 
-  protected async doQuery(
-    sql: string,
-    params?: any[],
+  protected async runCommand(
+    { sql, params }: SqlCommand,
     batch?: boolean
   ): Promise<QueryResult<any, any, any>> {
     const request = this._connection!.request();

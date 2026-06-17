@@ -370,6 +370,7 @@ export function prepareParameter(request: mssql.Request, p: Parameter) {
     request.output(p.name, mssqlType, value);
   }
 }
+// export const JSON_TYPE_PATTERN = 'JSON:';
 export const JSON_TYPE_PATTERN = '';
 
 export function normalValue(

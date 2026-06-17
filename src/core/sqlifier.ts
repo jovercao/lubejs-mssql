@@ -59,6 +59,10 @@ import {
   CreateSchema,
   DropSchema,
   BuiltIn,
+  Command,
+  SqlCommand,
+  QueryResult,
+  Statement,
 } from 'lubejs/core';
 import { MssqlVirtualTranslator } from './virtual-translator';
 import { sqlifyDbType, parseRawDbType, sqlifyLiteral } from './types';
@@ -108,12 +112,6 @@ export const DefaultSqlOptions: MssqlSqlOptions = {
 };
 
 export class MssqlSqlifier extends Sqlifier {
-  protected sqlifyCreateSchema(statement: CreateSchema): string {
-    return `CREATE SCHEMA ${this.quoted(statement.$name)}`;
-  }
-  protected sqlifyDropSchema(statement: DropSchema): string {
-    return `DROP SCHEMA ${this.quoted(statement.$name)}`;
-  }
   protected sqlifyDirection(direction: PARAMETER_DIRECTION): string {
     if (direction === 'IN') {
       return '';
@@ -128,9 +126,9 @@ export class MssqlSqlifier extends Sqlifier {
     super(Object.assign({}, DefaultSqlOptions, options));
   }
 
-  protected sqlifyExecuteArgumentList(
+  protected override sqlifyExecuteArgumentList(
     args: (BuiltIn | Expression<Scalar>)[],
-    params?: Set<Parameter<Scalar, string>>
+    params?: Parameter[]
   ): string {
     return args
       .map((ast) => {
@@ -184,27 +182,40 @@ export class MssqlSqlifier extends Sqlifier {
     return name;
   }
 
-  protected sqlifyDropTable(statement: DropTable): string {
+  protected sqlifyCreateSchema(statement: CreateSchema): SqlCommand {
+    return {
+      sql: `CREATE SCHEMA ${this.quoted(statement.$name)}`,
+    };
+  }
+  protected sqlifyDropSchema(statement: DropSchema): SqlCommand {
+    return {
+      sql: `DROP SCHEMA ${this.quoted(statement.$name)}`,
+    };
+  }
+
+  protected sqlifyDropTable(statement: DropTable): SqlCommand {
     let sql = '';
     const name = this.sqlifyObjectName(statement.$name);
     if (statement.$behavior === 'DROP_IF_EXISTS') {
       sql += `IF (OBJECT_ID(${this.sqlifyLiteral(name)}) IS NOT NULL) `;
     }
     sql += `DROP TABLE ${name}`;
-    return sql;
+    return {
+      sql,
+    };
   }
 
-  protected sqlifyDropView(statement: DropView): string {
+  protected sqlifyDropView(statement: DropView): SqlCommand {
     let sql = '';
     const name = this.sqlifyObjectName(statement.$name);
     if (statement.$behavior === 'DROP_IF_EXISTS') {
       sql += `IF (OBJECT_ID(${this.sqlifyLiteral(name)}) IS NOT NULL)\n`;
     }
     sql += `DROP VIEW ${name}`;
-    return sql;
+    return { sql };
   }
 
-  protected sqlifyCreateDatabase(statement: CreateDatabase): string {
+  protected sqlifyCreateDatabase(statement: CreateDatabase): SqlCommand {
     let sql = '';
     if (statement.$behavior === 'CREATE_IF_NOT_EXISTS') {
       sql += `IF (DB_ID(${this.sqlifyLiteral(statement.$name)}) IS NULL)\n`;
@@ -218,39 +229,44 @@ export class MssqlSqlifier extends Sqlifier {
     if (statement.$collate) {
       sql += ' COLLATE ' + statement.$collate;
     }
-    return sql;
+    return { sql };
   }
-  protected sqlifyAlterDatabase(statement: AlterDatabase): string {
-    return `ALTER DATABASE ${this.sqlifyObjectName(statement.$name)} COLLATE ${
-      statement.$collate
-    }`;
+  protected sqlifyAlterDatabase(statement: AlterDatabase): SqlCommand {
+    return {
+      sql: `ALTER DATABASE ${this.sqlifyObjectName(statement.$name)} COLLATE ${
+        statement.$collate
+      }`,
+    };
   }
-  protected sqlifyDropDatabase(statement: DropDatabase): string {
+  protected sqlifyDropDatabase(statement: DropDatabase): SqlCommand {
     let sql = '';
     if (statement.$behavior === 'DROP_IF_EXISTS') {
       sql += `IF (DB_ID(${this.sqlifyLiteral(statement.$name)}) IS NOT NULL) `;
     }
     sql += `DROP DATABASE ${this.quoted(statement.$name)}`;
-    return sql;
+    return { sql };
   }
-  protected sqlifyExecute(exec: Execute, params: Set<Parameter>): string {
+  protected override sqlifyExecute(exec: Execute): Command {
+    const params: Parameter[] = [];
     const returnParam = SQL.output(
       this.options.returnParameterName!,
       DbType.int32
     );
-    return (
-      'EXECUTE ' +
-      this.sqlifyParameter(returnParam, params) +
-      ' = ' +
-      this.sqlifyIdentifier(exec.$proc) +
-      ' ' +
-      this.sqlifyExecuteArgumentList(exec.$args, params)
-    );
+    return {
+      sql:
+        'EXECUTE ' +
+        this.sqlifyParameter(returnParam, params) +
+        ' = ' +
+        this.sqlifyIdentifier(exec.$proc) +
+        ' ' +
+        this.sqlifyExecuteArgumentList(exec.$args, params),
+      params,
+    };
   }
 
-  protected sqlifyBinaryOperation(
+  protected override sqlifyBinaryOperation(
     exp: BinaryOperation,
-    params?: Set<Parameter>
+    params?: Parameter[]
   ): string {
     if (exp.$operator === BINARY_OPERATION_OPERATOR.SHL) {
       return `${this.sqlifyExpression(
@@ -273,66 +289,125 @@ export class MssqlSqlifier extends Sqlifier {
     return super.sqlifyBinaryOperation(exp, params);
   }
 
-  sqlifyContinue(statement: Continue): string {
-    return 'CONTINUE';
+  /**
+   * 合并命令
+   */
+  mergeCommand(commands: Command[]): Command {
+    // 如果包含非SQL命令，则单独执行
+    if (commands.find((cmd) => typeof cmd === 'function')) {
+      return async function (connection): Promise<QueryResult<any, any, any>> {
+        const result = {
+          rows: null as any,
+          rowsAffected: 0,
+          rowsets: [] as any[],
+        };
+        for (const cmd of commands) {
+          const { rowsets, rowsAffected } = await connection.run(cmd);
+          result.rowsAffected += rowsAffected;
+          if (rowsets) {
+            result.rowsets.push(...rowsets);
+          }
+        }
+        result.rows = result.rowsets?.[0];
+        return result as QueryResult<any, any, any>;
+      };
+    }
+    const allParams = (commands as SqlCommand[])
+      .filter((cmd) => cmd.params)
+      .map((cmd) => cmd.params!)
+      .flat();
+    return {
+      sql: (commands as SqlCommand[]).map((cmd) => cmd.sql).join('\n'),
+      params: Array.from(new Set(allParams)),
+    };
   }
-  sqlifyBreak(statement: Break): string {
-    return 'BREAK';
+
+  sqlifyContinue(statement: Continue): SqlCommand {
+    return { sql: 'CONTINUE' };
   }
-  sqlifyWhile(statement: While, params?: Set<Parameter>): string {
+  sqlifyBreak(statement: Break): SqlCommand {
+    return { sql: 'BREAK' };
+  }
+  assertSqlCommand(command: Command): asserts command is SqlCommand {
+    if (typeof command === 'function') {
+      throw new Error(`Program statement not support func statement command.`);
+    }
+  }
+  sqlifyWhile(statement: While): SqlCommand {
+    const params: Parameter[] = [];
     this.assertAst(
       statement.$statement,
       'In while statement, do statement not found.'
     );
     let sql = `WHILE (${this.sqlifyCondition(statement.$condition)}) \n`;
-    sql += this.sqlifyStatement(statement.$statement, params);
-    return sql;
+    const innerStatement = this.sqlifyStatement(statement.$statement);
+    // this.assertSqlCommand(innerStatement);
+    sql += innerStatement.sql;
+    if (params && innerStatement.params) {
+      params.push(...innerStatement.params);
+    }
+    return { sql, params: Array.from(new Set<Parameter>(params)) };
   }
-  sqlifyIf(statement: If, params?: Set<Parameter>): string {
+  declare sqlifyStatement: (statement: Statement | Raw) => SqlCommand;
+
+  sqlifyIf(statement: If): Command {
+    const params: Parameter[] = [];
     this.assertAst(
       statement.$then,
       'In if statement, then statement not found.'
     );
-    let sql = `IF (${this.sqlifyCondition(
-      statement.$condition,
-      params
-    )})\n  ${this.sqlifyStatement(statement.$then, params)}\n  `;
+    let sql = `IF (${this.sqlifyCondition(statement.$condition, params)})\n  ${
+      this.sqlifyStatement(statement.$then).sql
+    }\n  `;
     if (statement.$elseif && statement.$elseif.length > 0) {
       sql += statement.$elseif
         .map(([condition, statement]) => {
           this.assertAst(statement, 'In if statement, elseif then not found');
-          return `ELSE IF (${this.sqlifyCondition(
-            condition
-          )}) ${this.sqlifyStatement(statement)}`;
+          const innerStatement = this.sqlifyStatement(statement);
+          // this.assertSqlCommand(innerStatement);
+          if (params && innerStatement.params) {
+            params.push(...innerStatement.params);
+          }
+          return `ELSE IF (${this.sqlifyCondition(condition, params)}) ${
+            innerStatement.sql
+          }`;
         })
         .join('\n  ');
     }
     if (statement.$else) {
+      this.assertAst(statement, 'In if statement, elseif then not found');
+      const innerStatement = this.sqlifyStatement(statement.$else);
+      // this.assertSqlCommand(innerStatement);
       sql += 'ELSE ';
-      sql += this.sqlifyStatement(statement.$else);
+      sql += innerStatement.sql;
+      if (innerStatement.params) {
+        params?.push(...innerStatement.params);
+      }
     }
-    return sql;
+    return { sql, params };
   }
 
-  public joinBatchSql(...sqls: string[]): string {
+  public joinBatchSql(sqls: string[]): string {
     return sqls.join('\nGO\n');
   }
 
-  protected sqlifyAnnotation(statement: Annotation): string {
+  protected sqlifyAnnotation(statement: Annotation): SqlCommand {
+    let sql: string;
     if (statement.$style === 'LINE') {
-      return statement.$text
+      sql = statement.$text
         .split(/\n|\r\n/g)
         .map((line) => '-- ' + line)
         .join('\n');
+    } else {
+      sql =
+        '/**\n' +
+        statement.$text
+          .split(/\n|\r\n/g)
+          .map((line) => ' * ' + line.replace(/\*\//g, '* /'))
+          .join('\n') +
+        '\n */';
     }
-    return (
-      '/**\n' +
-      statement.$text
-        .split(/\n|\r\n/g)
-        .map((line) => ' * ' + line.replace(/\*\//g, '* /'))
-        .join('\n') +
-      '\n */'
-    );
+    return { sql };
   }
 
   public sqlifyLiteral(literal: Scalar | Raw, dbType?: DbType): string {
@@ -342,16 +417,16 @@ export class MssqlSqlifier extends Sqlifier {
     return sqlifyLiteral(literal, dbType);
   }
 
-  protected sqlifyDropSequence(statement: DropSequence): string {
+  protected sqlifyDropSequence(statement: DropSequence): SqlCommand {
     let sql = '';
     const name = this.sqlifyObjectName(statement.$name);
     if (statement.$behavior === 'DROP_IF_EXISTS') {
       sql += `IF (OBJECT_ID(${this.sqlifyLiteral(name)}) IS NOT NULL) `;
     }
     sql += `DROP SEQUENCE ${name}`;
-    return sql;
+    return { sql };
   }
-  protected sqlifyCreateSequence(statement: CreateSequence): string {
+  protected sqlifyCreateSequence(statement: CreateSequence): SqlCommand {
     this.assertAst(
       statement.$dbType,
       'Sequence dbType not found, pls use `.as(dbType)` to set it.'
@@ -371,7 +446,7 @@ export class MssqlSqlifier extends Sqlifier {
     )} START WITH ${this.sqlifyLiteral(
       statement.$startValue.$value
     )} INCREMENT BY ${this.sqlifyLiteral(statement.$increment.$value)}`;
-    return sql;
+    return { sql };
   }
   protected sqlifyProcedureParameter(param: ProcedureParameter): string {
     let sql = `${this.sqlifyVariantName(param.$name)} ${this.sqlifyType(
@@ -406,38 +481,48 @@ export class MssqlSqlifier extends Sqlifier {
     return `${params.map((p) => this.sqlifyFunctionParameter(p)).join(', ')}`;
   }
 
-  protected sqlifyBlock(statement: Block, params?: Set<Parameter>): string {
-    let sql = '';
+  protected sqlifyBlock(statement: Block): SqlCommand {
+    let declare: SqlCommand;
+    let sql: string = '';
     if (statement.$declares) {
-      sql += this.sqlifyDeclare(statement.$declares) + '\n';
+      declare = this.sqlifyDeclare(statement.$declares);
+      sql += declare.sql;
     }
-    sql += `BEGIN\n  ${statement.$body
-      .map((statement) => this.sqlifyStatement(statement, params))
-      .join('\n  ')}\nEND`;
-    return sql;
-  }
-
-  protected sqlifyDeclare(declare: Declare): string {
-    return (
-      'DECLARE ' +
-      declare.$declares
-        .map((dec) =>
-          TableVariant.isTableVariant(dec)
-            ? this.sqlifyTableVariantDeclare(dec)
-            : this.sqlifyVariantDeclare(dec)
-        )
-        .join(', ') +
-      '\n'
+    const innerStatement = this.mergeCommand(
+      statement.$body.map((statement) => this.sqlifyStatement(statement))
     );
+    this.assertSqlCommand(innerStatement);
+    sql += `BEGIN\n  ${innerStatement.sql}\nEND`;
+    return {
+      sql,
+      params: innerStatement.params,
+    };
   }
 
-  protected sqlifyDropIndex(index: DropIndex): string {
-    return `DROP INDEX ${this.sqlifyObjectName(index.$table)}.${this.quoted(
-      index.$name
-    )}`;
+  protected sqlifyDeclare(declare: Declare): SqlCommand {
+    return {
+      sql:
+        'DECLARE ' +
+        declare.$declares
+          .map((dec) =>
+            TableVariant.isTableVariant(dec)
+              ? this.sqlifyTableVariantDeclare(dec)
+              : this.sqlifyVariantDeclare(dec)
+          )
+          .join(', ') +
+        '\n',
+    };
   }
 
-  protected sqlifyCreateIndex(statement: CreateIndex): string {
+  protected sqlifyDropIndex(index: DropIndex): SqlCommand {
+    return {
+      sql: `DROP INDEX ${this.sqlifyObjectName(index.$table)}.${this.quoted(
+        index.$name
+      )}`,
+    };
+  }
+
+  protected sqlifyCreateIndex(statement: CreateIndex): SqlCommand {
     let sql = 'CREATE ';
     if (statement.$unique) {
       sql += 'UNIQUE ';
@@ -453,20 +538,20 @@ export class MssqlSqlifier extends Sqlifier {
     )} ON ${this.sqlifyObjectName(statement.$table)}(${statement.$columns
       .map((col) => `${this.quoted(col.name)} ${col.sort}`)
       .join(', ')})`;
-    return sql;
+    return { sql };
   }
 
-  protected sqlifyDropFunction(statement: DropFunction): string {
+  protected sqlifyDropFunction(statement: DropFunction): SqlCommand {
     let sql = '';
     const name = this.sqlifyObjectName(statement.$name);
     if (statement.$behavior === 'DROP_IF_EXISTS') {
       sql += `IF (OBJECT_ID(${this.sqlifyLiteral(name)}) IS NOT NULL) `;
     }
     sql += `DROP FUNCTION ${name}`;
-    return sql;
+    return { sql };
   }
 
-  protected sqlifyAlterFunction(statement: AlterFunction): string {
+  protected sqlifyAlterFunction(statement: AlterFunction): SqlCommand {
     // return `ALTER FUNCTION ${this.sqlifyObjectName(statement.$name)}(${
     //   statement.$params
     //     ? statement.$params
@@ -483,7 +568,8 @@ export class MssqlSqlifier extends Sqlifier {
       statement.$returns,
       'In AlterFunction statement, returns type not found.'
     );
-    return `ALTER FUNCTION ${this.sqlifyObjectName(
+
+    const sql = `ALTER FUNCTION ${this.sqlifyObjectName(
       statement.$name
     )}(${this.sqlifyFunctionParameters(statement.$params)}) RETURNS ${
       Raw.isRaw(statement.$returns)
@@ -496,19 +582,23 @@ export class MssqlSqlifier extends Sqlifier {
         ? this.sqlifyVariantDeclare(statement.$returns)
         : this.sqlifyFunctionParameter(statement.$returns)
     } AS
-BEGIN
-${this.sqlifyStatements(statement.$body)}
-END`;
+${this.sqlifyBlock(SQL.block(statement.$body)).sql}
+`;
+    return { sql };
   }
 
-  protected sqlifyAssignment(
-    assign: Assignment,
-    params?: Set<Parameter<Scalar, string>>
-  ): string {
-    return 'SET ' + super.sqlifyAssignment(assign, params);
+  protected override sqlifyAssignment(assign: Assignment): SqlCommand {
+    const params: Parameter[] = [];
+    return {
+      sql: `SET ${this.sqlifyExpression(
+        assign.left,
+        params
+      )} = ${this.sqlifyExpression(assign.right, params)}`,
+      params,
+    };
   }
 
-  protected sqlifyCreateFunction(statement: CreateFunction): string {
+  protected sqlifyCreateFunction(statement: CreateFunction): SqlCommand {
     this.assertAst(
       statement.$body,
       'In CreateFunction statement, as statement not found.'
@@ -540,38 +630,38 @@ END`;
         ? this.sqlifyVariantDeclare(statement.$returns)
         : this.sqlifyFunctionParameter(statement.$returns)
     } AS
-BEGIN
-${this.sqlifyStatements(statement.$body)}
-END`;
-    return sql;
+${this.sqlifyBlock(SQL.block(statement.$body)).sql}
+`;
+    return { sql };
   }
 
-  protected sqlifyDropProcedure(statement: DropProcedure): string {
+  protected sqlifyDropProcedure(statement: DropProcedure): SqlCommand {
     let sql = '';
     const name = this.sqlifyObjectName(statement.$name);
     if (statement.$behavior === 'DROP_IF_EXISTS') {
       sql += `IF (OBJECT_ID(${this.sqlifyLiteral(name)}) IS NOT NULL) `;
     }
     sql += `DROP PROCEDURE ${name}`;
-    return sql;
+    return { sql };
   }
 
-  protected sqlifyAlterProcedure(statement: AlterProcedure): string {
+  protected sqlifyAlterProcedure(statement: AlterProcedure): SqlCommand {
     this.assertAst(
       statement.$body,
       'AlterProcedure body statements not found, Pls use .as(...) assign it.'
     );
-    return `ALTER PROCEDURE ${this.sqlifyObjectName(
+    const sql = `ALTER PROCEDURE ${this.sqlifyObjectName(
       statement.$name
     )} ${this.sqlifyProcedureParameters(statement.$params)}
 AS
-BEGIN
-${this.sqlifyStatements(statement.$body)}
-END
+${this.sqlifyBlock(SQL.block(statement.$body)).sql}
 `;
+    return { sql };
   }
 
-  protected sqlifyCreateView(statement: CreateView<any, string>): string {
+  protected override sqlifyCreateView(
+    statement: CreateView<any, string>
+  ): SqlCommand {
     this.assertAst(
       statement.$body,
       'CreateView statement has no statements body.'
@@ -581,16 +671,13 @@ END
     if (statement.$behavior === 'CREATE_IF_NOT_EXISTS') {
       sql += `IF (OBJECT_ID(${this.sqlifyLiteral(viewName)}) IS NULL)\n`;
     }
-    //  else if (statement.$behavior === 'CREATE_OR_REPLACE') {
-    //   sql += `IF (OBJECT_ID(${this.sqlifyLiteral(
-    //     viewName
-    //   )}) is not null) DROP VIEW ${this.quoted(viewName)}\n`;
-    // }
-    sql += `CREATE VIEW ${viewName} AS ${this.sqlifySelect(statement.$body)}`;
-    return sql;
+    sql += `CREATE VIEW ${viewName} AS ${this.internalSqlifySelect(
+      statement.$body
+    )}`;
+    return { sql };
   }
 
-  protected sqlifyCreateProcedure(statement: CreateProcedure): string {
+  protected sqlifyCreateProcedure(statement: CreateProcedure): SqlCommand {
     this.assertAst(
       statement.$body,
       'CreateProcedure body statements not found, Pls use .as(...) assign it.'
@@ -609,13 +696,12 @@ END
       statement.$params
     )}
 AS
-BEGIN
-  ${this.sqlifyStatements(statement.$body)}
-END`;
-    return sql;
+${this.sqlifyBlock(SQL.block(statement.$body)).sql}
+`;
+    return { sql };
   }
 
-  protected sqlifyAlterTable(statement: AlterTable<string>): string {
+  protected sqlifyAlterTable(statement: AlterTable<string>): SqlCommand {
     let sql = `ALTER TABLE ${this.sqlifyObjectName(statement.$name)}`;
     if (statement.$adds) {
       sql += ' ADD ';
@@ -638,7 +724,7 @@ END`;
         statement.$alterColumn.$nullable ? 'NULL' : 'NOT NULL'
       }`; // + this.sqlifyTableMember(statement.$alterColumn)
     }
-    return sql;
+    return { sql };
   }
 
   private sqlifyTableMember(
@@ -731,7 +817,7 @@ END`;
     }
   }
 
-  sqlifyCreateTable(statement: CreateTable): string {
+  sqlifyCreateTable(statement: CreateTable): SqlCommand {
     this.assertAst(statement.$body, 'CreateTable statement name not found.');
     const tableName = this.sqlifyObjectName(statement.$name);
     let sql = '';
@@ -748,16 +834,23 @@ END`;
       .map((member) => this.sqlifyTableMember(member))
       .join(',\n  ');
     sql += ')';
-    return sql;
+    return { sql };
   }
 
-  protected sqlifyInsert(insert: Insert, params?: Set<Parameter>): string {
-    const sql = super.sqlifyInsert(insert, params);
-    if (!insert.$identityInsert) return sql;
-    return `SET IDENTITY_INSERT ${this.sqlifyObjectName(insert.$table.$name)} ON
+  protected override sqlifyInsert(insert: Insert): Command {
+    const params: Parameter[] = [];
+    const sql = this.internalSqlifyInsert(insert, params);
+    if (!insert.$identityInsert)
+      return {
+        sql,
+      };
+
+    return {
+      sql: `SET IDENTITY_INSERT ${this.sqlifyObjectName(insert.$table.$name)} ON
 ${sql}
 SET IDENTITY_INSERT ${this.sqlifyObjectName(insert.$table.$name)} OFF
-`;
+`,
+    };
   }
 
   protected sqlifyTableVariantDeclare(declare: TableVariant<any>): string {
@@ -782,9 +875,9 @@ SET IDENTITY_INSERT ${this.sqlifyObjectName(insert.$table.$name)} OFF
     return parseRawDbType(type);
   }
 
-  protected sqlifyOffsetLimit(
+  protected override sqlifyOffsetLimit(
     select: Select<any>,
-    params?: Set<Parameter>
+    params?: Parameter[]
   ): string {
     let sql = '';
     if (select.$offset === undefined && select.$limit === undefined) return sql;
