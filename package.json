@@ -12,8 +12,8 @@
   ],
   "scripts": {
     "build": "pnpm run clean && pnpm run lint && tsc && pnpm run pack",
-    "clean": "pwsh -c if (test-path dist) { rm -r -force dist }",
-    "pack": "pwsh -c cp README.md dist/; cp README-zh_CN.md dist/; cp package.json dist/; cd dist; pnpm pack;",
+    "clean": "node scripts/build.js clean dist",
+    "pack": "node scripts/build.js pack",
     "lint": "eslint --fix ./src --ext .ts"
   },
   "keywords": [
