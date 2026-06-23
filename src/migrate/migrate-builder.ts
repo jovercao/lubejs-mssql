@@ -10,6 +10,9 @@ import {
   DbProvider,
   Expression,
   ExecutableStatement,
+  AlterTableBuilder,
+  ColumnDeclareForAlter,
+  ColumnChangeset,
 } from 'lubejs';
 import { sp_rename } from '../core/build-in';
 import { formatSql } from '../core/util';
@@ -125,6 +128,92 @@ export class MssqlMigrateBuilder extends MigrateBuilder {
       SQL.alterTable(table).drop(({ column: c }) => c(column)),
       this.renameColumn(table, tempColumn, column),
     ];
+  }
+
+  /**
+   * 统一列属性变更入口（mssql）。从变更集 changes 只发改动项：
+   * - 类型/可空 → ALTER COLUMN（mssql 仅能改这两项）
+   * - 注释 → 扩展属性（setColumnComment）
+   * - 默认值 → 默认约束（setDefaultValue/dropDefaultValue）
+   * - identity → 需重建表，发警告（setIdentity/dropIdentity）
+   * - 计算列 → 需重建表，发警告
+   * - rowflag → mssql TIMESTAMP 由 DB 自动维护，类型变更已由 changes.type 处理，不另发
+   */
+  alterColumn(
+    table: XObjectName,
+    buildColumn: (
+      column: (name: string, type: DbType) => ColumnDeclareForAlter
+    ) => ColumnDeclareForAlter,
+    changes: ColumnChangeset
+  ): ExecutableStatement | ExecutableStatement[] {
+    const col = buildColumn(AlterTableBuilder.alter.column);
+    const name = col.$name;
+    const stmts: ExecutableStatement[] = [];
+    const push = (s: ExecutableStatement | ExecutableStatement[]) => {
+      if (Array.isArray(s)) stmts.push(...s);
+      else stmts.push(s);
+    };
+
+    if (changes.type || changes.isNullable) {
+      const type = this.sqlifier.sqlifyType(col.$dbType);
+      const nullability = col.$nullable ? 'NULL' : 'NOT NULL';
+      push(
+        SQL.raw(
+          `ALTER TABLE ${this.sqlifier.sqlifyObjectName(
+            table
+          )} ALTER COLUMN ${this.sqlifier.quoted(name)} ${type} ${nullability}`
+        )
+      );
+    }
+
+    if (changes.comment) {
+      push(
+        this.setColumnComment(table, name, changes.comment.source ?? null)
+      );
+    }
+
+    if (changes.defaultValue) {
+      if (changes.defaultValue.source) {
+        push(
+          this.setDefaultValue(
+            table,
+            name,
+            SQL.raw(changes.defaultValue.source as string)
+          )
+        );
+      } else {
+        push(this.dropDefaultValue(table, name));
+      }
+    }
+
+    if (
+      changes.isIdentity ||
+      changes.identityStartValue ||
+      changes.identityIncrement
+    ) {
+      if (col.$identity) {
+        push(
+          this.setIdentity(
+            table,
+            name,
+            col.$identity.startValue,
+            col.$identity.increment
+          )
+        );
+      } else {
+        push(this.dropIdentity(table, name));
+      }
+    }
+
+    if (changes.isCalculate || changes.calculateExpression) {
+      push(
+        SQL.annotation(
+          '警告: mssql 计算列变更需重建表，暂不支持，请手动处理。'
+        )
+      );
+    }
+
+    return stmts;
   }
 
   // existsTable(name: CompatiableObjectName<string>): Expression<Scalar> {
