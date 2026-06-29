@@ -33,7 +33,7 @@ const DefaultConnectOptions: MssqlConfig = {
      * 使用UTC存储日期，避免时区问题
      */
     useUTC: false,
-  },
+  } as MssqlConfig['options'],
   // 请求超时时间
   requestTimeout: 60000,
   // 连接超时时间
@@ -74,14 +74,14 @@ export function parseMssqlConfig(options: MssqlConnectOptions): MssqlConfig {
   //   mssqlOptions.pool.idleTimeoutMillis = options.recoveryConnection;
   // }
   if (options.connectionTimeout) {
-    mssqlOptions.options.connectTimeout = options.connectionTimeout;
+    (mssqlOptions.options as any).connectTimeout = options.connectionTimeout;
   }
   if (options.requestTimeout) {
-    mssqlOptions.options.requestTimeout = options.requestTimeout;
+    (mssqlOptions.options as any).requestTimeout = options.requestTimeout;
   }
 
   if (options.encrypt) {
-    mssqlOptions.options.encrypt = options.encrypt;
+    (mssqlOptions.options as any).encrypt = options.encrypt;
   }
 
   if (options.useUTC !== undefined) {
