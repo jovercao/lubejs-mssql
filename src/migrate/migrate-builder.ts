@@ -12,7 +12,6 @@ import {
   ExecutableStatement,
   AlterTableBuilder,
   ColumnDeclareForAlter,
-  ColumnChangeset,
 } from 'lubejs';
 import { sp_rename } from '../core/build-in';
 import { formatSql } from '../core/util';
@@ -93,58 +92,11 @@ export class MssqlMigrateBuilder extends MigrateBuilder {
   ): ExecutableStatement {
     return this.setConstraintComment(table, name, null);
   }
-  setAutoRowflag(
-    table: XObjectName<string>,
-    column: string
-  ): ExecutableStatement[] {
-    return [
-      SQL.note(
-        '=========================注意：MSSQL 自带行标记列类型，仅可通过修改类型来达成========================'
-      ),
-      SQL.alterTable(table).dropColumn(column),
-      SQL.alterTable(table).add(({ column: c }) =>
-        c(column, DbType.raw('TIMESTAMP'))
-      ),
-      // SQL.alterTable(table).alterColumn(c =>
-      //   c(column, DbType.raw('ROWVERSION'))
-      // )
-    ];
-  }
-  dropAutoRowflag(
-    table: XObjectName<string>,
-    column: string
-  ): ExecutableStatement[] {
-    const tempColumn = '__' + column;
-    return [
-      SQL.note(
-        '=========================MSSQL 自带标记列，仅通过修改类型来达成========================'
-      ),
-      SQL.alterTable(table).add(({ column: c }) =>
-        c(tempColumn, DbType.binary(8)).notNull()
-      ),
-      SQL.update(table).set({
-        [column]: SQL.field(column),
-      }),
-      SQL.alterTable(table).drop(({ column: c }) => c(column)),
-      this.renameColumn(table, tempColumn, column),
-    ];
-  }
-
-  /**
-   * 统一列属性变更入口（mssql）。从变更集 changes 只发改动项：
-   * - 类型/可空 → ALTER COLUMN（mssql 仅能改这两项）
-   * - 注释 → 扩展属性（setColumnComment）
-   * - 默认值 → 默认约束（setDefaultValue/dropDefaultValue）
-   * - identity → 需重建表，发警告（setIdentity/dropIdentity）
-   * - 计算列 → 需重建表，发警告
-   * - rowflag → mssql TIMESTAMP 由 DB 自动维护，类型变更已由 changes.type 处理，不另发
-   */
   alterColumn(
     table: XObjectName,
     buildColumn: (
       column: (name: string, type: DbType) => ColumnDeclareForAlter
-    ) => ColumnDeclareForAlter,
-    changes: ColumnChangeset
+    ) => ColumnDeclareForAlter
   ): ExecutableStatement | ExecutableStatement[] {
     const col = buildColumn(AlterTableBuilder.alter.column);
     const name = col.$name;
@@ -154,58 +106,69 @@ export class MssqlMigrateBuilder extends MigrateBuilder {
       else stmts.push(s);
     };
 
-    if (changes.type || changes.isNullable) {
-      const type = this.sqlifier.sqlifyType(col.$dbType);
-      const nullability = col.$nullable ? 'NULL' : 'NOT NULL';
+    // 类型/可空：始终发 ALTER COLUMN（全量重声明，mssql 重设同类型幂等）
+    const type = this.sqlifier.sqlifyType(col.$dbType);
+    const nullability = col.$nullable ? 'NULL' : 'NOT NULL';
+    push(
+      SQL.raw(
+        `ALTER TABLE ${this.sqlifier.sqlifyObjectName(
+          table
+        )} ALTER COLUMN ${this.sqlifier.quoted(name)} ${type} ${nullability}`
+      )
+    );
+
+    // comment：setColumnComment 内部 IF EXISTS drop 再 add，upsert 安全
+    if (col.$comment !== undefined) {
+      push(this.setColumnComment(table, name, col.$comment ?? null));
+    }
+
+    // default：有值设、无值删；dropDefaultValue 内部 IF @ConstraintName IS NOT NULL 保护
+    if (col.$default) {
+      push(this.setDefaultValue(table, name, col.$default));
+    } else {
+      push(this.dropDefaultValue(table, name));
+    }
+
+    // identity 四态
+    if (col.$identityAction === 'add') {
+      // mssql 加 identity 需重建表，不支持自动（对齐 EF Core）
+      push(
+        SQL.annotation(
+          '警告: mssql 加 identity 属性需重建表，暂不支持自动操作，请手动处理。',
+          `操作信息： addIdentity(table: ${this.sqlifier.sqlifyObjectName(table)}, column: ${name})`
+        )
+      );
       push(
         SQL.raw(
-          `ALTER TABLE ${this.sqlifier.sqlifyObjectName(
-            table
-          )} ALTER COLUMN ${this.sqlifier.quoted(name)} ${type} ${nullability}`
+          `RAISERROR ('警告: mssql 加 identity 属性需重建表，暂不支持自动操作，请手动处理。', 16, 1);`
+        )
+      );
+    } else if (col.$identityAction === 'reseed') {
+      // 种子变更：DBCC CHECKIDENT 自动、安全、幂等
+      const seed = col.$identitySeed?.startValue ?? 1;
+      push(
+        SQL.raw(
+          `DBCC CHECKIDENT (${this.sqlifier.sqlifyObjectName(table)}, RESEED, ${seed})`
+        )
+      );
+    } else if (col.$identityAction === 'drop') {
+      // mssql 去 identity 需侧迁列，不支持自动（对齐 EF Core）
+      push(
+        SQL.annotation(
+          '警告: mssql 去 identity 属性需侧迁列，暂不支持自动操作，请手动处理。',
+          `操作信息： dropIdentity(table: ${this.sqlifier.sqlifyObjectName(table)}, column: ${name})`
+        )
+      );
+      push(
+        SQL.raw(
+          `RAISERROR ('警告: mssql 去 identity 属性需侧迁列，暂不支持自动操作，请手动处理。', 16, 1);`
         )
       );
     }
+    // undefined: 不发 identity 语句
 
-    if (changes.comment) {
-      push(
-        this.setColumnComment(table, name, changes.comment.source ?? null)
-      );
-    }
-
-    if (changes.defaultValue) {
-      if (changes.defaultValue.source) {
-        push(
-          this.setDefaultValue(
-            table,
-            name,
-            SQL.raw(changes.defaultValue.source as string)
-          )
-        );
-      } else {
-        push(this.dropDefaultValue(table, name));
-      }
-    }
-
-    if (
-      changes.isIdentity ||
-      changes.identityStartValue ||
-      changes.identityIncrement
-    ) {
-      if (col.$identity) {
-        push(
-          this.setIdentity(
-            table,
-            name,
-            col.$identity.startValue,
-            col.$identity.increment
-          )
-        );
-      } else {
-        push(this.dropIdentity(table, name));
-      }
-    }
-
-    if (changes.isCalculate || changes.calculateExpression) {
+    // 计算列：维持"需重建表，发警告"语义
+    if (col.$calculate) {
       push(
         SQL.annotation(
           '警告: mssql 计算列变更需重建表，暂不支持，请手动处理。'
@@ -221,7 +184,7 @@ export class MssqlMigrateBuilder extends MigrateBuilder {
   // }
   private readonly sqlifier: Sqlifier;
 
-  setDefaultValue(
+  private setDefaultValue(
     table: XObjectName<string>,
     column: string,
     defaultValue: XExpression<Scalar>
@@ -249,7 +212,7 @@ ALTER TABLE ${this.sqlifier.sqlifyObjectName(table)} ADD DEFAULT (${
 `);
   }
 
-  dropDefaultValue(
+  private dropDefaultValue(
     table: XObjectName<string>,
     column: string
   ): ExecutableStatement {
@@ -324,43 +287,6 @@ END
     name: string
   ): ExecutableStatement {
     return SQL.alterTable(table).drop((builder) => builder.check(name));
-  }
-
-  setIdentity(
-    table: XObjectName<string>,
-    column: string,
-    startValue: number,
-    increment: number
-  ): ExecutableStatement[] {
-    return [
-      SQL.annotation(
-        '警告: 由于mssql特性原因，setIdentity操作需要重建表，暂不支持identity属性变更，请手动处理，带来不便敬请谅解。',
-        `操作信息： setIdentity(table: ${this.sqlifier.sqlifyObjectName(
-          table
-        )}, column: ${column}, startValue: ${startValue}, increment: ${increment})`
-      ),
-      SQL.raw(
-        `RAISERROR ('警告: 由于mssql特性原因，setIdentity操作需要重建表，暂不支持identity属性变更，请手动处理，带来不便敬请谅解。', 16, 1);`
-      ),
-    ];
-  }
-
-  dropIdentity(
-    table: XObjectName<string>,
-    column: string
-  ): ExecutableStatement[] {
-    // const sql = this.copyNewColumn(table, column)
-    return [
-      SQL.annotation(
-        '警告: 由于mssql特性原因，dropIdentity操作需要重建表，暂不支持identity属性变更，请手动处理，带来不便敬请谅解。',
-        `操作信息： dropIdentity(table: ${this.sqlifier.sqlifyObjectName(
-          table
-        )}, column: ${column})`
-      ),
-      SQL.raw(
-        `RAISERROR ('警告: 由于mssql特性原因，dropIdentity操作需要重建表，暂不支持identity属性变更，请手动处理，带来不便敬请谅解。', 16, 1);`
-      ),
-    ];
   }
 
   setProcedureComment(
