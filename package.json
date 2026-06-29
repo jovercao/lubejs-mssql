@@ -29,7 +29,8 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@jovercao/mssql": "^7.2.1-jover.9",
-    "lubejs": "file:../lubejs/dist/lubejs-3.0.0-preview08.tgz"
+    "lubejs": "file:../lubejs/dist/lubejs-3.0.0-preview08.tgz",
+    "snowflake-id-node": "^4.0.1"
   },
   "devDependencies": {
     "@types/mssql": "^6.0.8",

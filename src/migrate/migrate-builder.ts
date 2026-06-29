@@ -15,6 +15,7 @@ import {
 } from 'lubejs';
 import { sp_rename } from '../core/build-in';
 import { formatSql } from '../core/util';
+import { defaultGenerator } from 'snowflake-id-node';
 
 const COMMENT_EXTEND_PROPERTY_NAME = 'MS_Description';
 
@@ -26,10 +27,9 @@ export class MssqlMigrateBuilder extends MigrateBuilder {
 
   throw(errmsg: XExpression<string>): ExecutableStatement {
     return SQL.raw(
-      `RAISERROR(${
-        typeof errmsg === 'string'
-          ? this.sqlifier.sqlifyLiteral(errmsg)
-          : this.sqlifier.sqlifyExpression(errmsg)
+      `RAISERROR(${typeof errmsg === 'string'
+        ? this.sqlifier.sqlifyLiteral(errmsg)
+        : this.sqlifier.sqlifyExpression(errmsg)
       }, 10, 1)`
     );
   }
@@ -189,26 +189,26 @@ export class MssqlMigrateBuilder extends MigrateBuilder {
     column: string,
     defaultValue: XExpression<Scalar>
   ): ExecutableStatement {
+    const noiceStr = defaultGenerator.generateSync();
     return SQL.raw(`
-DECLARE @ConstaintName varchar(128);
-SELECT @ConstaintName = dc.name
+DECLARE @ConstaintName_${table} varchar(128);
+SELECT @ConstaintName_${noiceStr} = dc.name
 FROM sys.default_constraints dc
 JOIN sys.columns c ON dc.parent_column_id = c.column_id and dc.parent_object_id = c.object_id
 WHERE c.object_id = object_id('${this.sqlifier.sqlifyObjectName(
       table
     )}') AND c.name = ${this.sqlifier.sqlifyLiteral(column)};
-IF (@ConstaintName IS NOT NULL)
+IF (@ConstaintName_${noiceStr} IS NOT NULL)
 BEGIN
  EXEC ('ALTER TABLE ${this.sqlifier.sqlifyObjectName(
-   table
- )} DROP CONSTRAINT ' + @ConstaintName)
+      table
+    )} DROP CONSTRAINT ' + @ConstaintName_${noiceStr})
 END
 
-ALTER TABLE ${this.sqlifier.sqlifyObjectName(table)} ADD DEFAULT (${
-      Expression.isExpression(defaultValue)
+ALTER TABLE ${this.sqlifier.sqlifyObjectName(table)} ADD DEFAULT (${Expression.isExpression(defaultValue)
         ? this.sqlifier.sqlifyExpression(defaultValue)
         : defaultValue
-    }) FOR ${this.sqlifier.quoted(column)}
+      }) FOR ${this.sqlifier.quoted(column)}
 `);
   }
 
@@ -216,61 +216,23 @@ ALTER TABLE ${this.sqlifier.sqlifyObjectName(table)} ADD DEFAULT (${
     table: XObjectName<string>,
     column: string
   ): ExecutableStatement {
+    const noiceStr = defaultGenerator.generateSync();
     return SQL.raw(`
-DECLARE @ConstaintName varchar(128);
-SELECT @ConstaintName = dc.name
+DECLARE @ConstaintName_${noiceStr} varchar(128);
+SELECT @ConstaintName_${noiceStr} = dc.name
 FROM sys.default_constraints dc
 JOIN sys.columns c ON dc.parent_column_id = c.column_id AND dc.parent_object_id = c.object_id
 WHERE c.object_id = object_id('${this.sqlifier.sqlifyObjectName(
       table
     )}') and c.name = ${this.sqlifier.sqlifyLiteral(column)}
-IF (@ConstaintName IS NOT NULL)
+IF (@ConstaintNam_${noiceStr} IS NOT NULL)
 BEGIN
   EXEC ('ALTER TABLE ${this.sqlifier.sqlifyObjectName(
-    table
-  )} DROP CONSTRAINT ' + @ConstaintName)
+      table
+    )} DROP CONSTRAINT ' + @ConstaintName_${noiceStr})
 END
 `);
   }
-
-  // setColumnType(table: CompatiableObjectName<string>, name: string, type: DbType): Statement {
-  //   throw new Error('Method not implemented.')
-  // }
-
-  // /**
-  //  * 复制一个新列及列的数据，以及除Identity以外的所有属性。
-  //  * @param table
-  //  * @param name
-  //  * @param newName
-  //  */
-  // public async copyNewColumn(
-  //   table: CompatiableObjectName,
-  //   name: string,
-  //   newName: string
-  // ): Promise<Statement> {
-  //   const result = SQL.block();
-  //   const tableSchema = await load(
-  //     this.provider,
-  //     'TABLE',
-  //     typeof table === 'string' ? table : table[0]
-  //   );
-  //   const columnSchema = tableSchema.columns.find(col => col.name === name);
-  //   result.append(
-  //     SQL.alterTable(table).add(builder =>
-  //       builder.column(newName, SQL.raw(columnSchema.type)).null()
-  //     )
-  //   );
-  //   const t = SQL.table(table);
-  //   result.append(SQL.update(t).set(t[newName].assign(t[name])));
-  //   if (!columnSchema.isNullable) {
-  //     result.append(
-  //       SQL.alterTable(table).alterColumn(column =>
-  //         column(newName, SQL.raw(columnSchema.type)).notNull()
-  //       )
-  //     );
-  //   }
-  //   return result;
-  // }
 
   addCheckConstaint(
     table: XObjectName<string>,
@@ -289,205 +251,74 @@ END
     return SQL.alterTable(table).drop((builder) => builder.check(name));
   }
 
-  setProcedureComment(
-    name: XObjectName,
-    comment: string | null
-  ): ExecutableStatement {
+  private setComment(name: XObjectName, type: 'TABLE' | 'VIEW' | 'SEQUENCE' | 'INDEX' | 'CONSTRAINT' | 'FUNCTION' | 'PROCEDURE',
+    comment: string | null): ExecutableStatement {
+    const schemaNoiceStr = defaultGenerator.generateSync();
+    const nameNoiceStr = defaultGenerator.generateSync();
+    const objectIdNoiceStr = defaultGenerator.generateSync();
     let sql = formatSql`
--- MigrateBuilder.setProcedureComment(${this.sqlifier.sqlifyObjectName(
+-- MigrateBuilder.setSequenceComment(${this.sqlifier.sqlifyObjectName(
       name
     )}, ${comment});
-DECLARE @Schema VARCHAR(100), @Proc VARCHAR(100), @ObjectId INT
+DECLARE @Schema_${schemaNoiceStr} VARCHAR(100), @Name_${nameNoiceStr} VARCHAR(100), @ObjectId_${objectIdNoiceStr} INT
 
-SELECT @ObjectId = o.object_id, @Schema = s.name, @Proc = o.name
+SELECT @ObjectId = o.object_id, @Schema_${schemaNoiceStr} = s.name, @Name_${nameNoiceStr} = o.name
 FROM sys.objects o JOIN sys.schemas s ON o.schema_id = s.schema_id
 WHERE o.object_id = object_id(${this.sqlifier.sqlifyObjectName(name)})
 
-IF EXISTS(SELECT 1 FROM sys.extended_properties p WHERE p.major_id = @ObjectId AND p.minor_id = 0 AND p.class = 1)
+IF EXISTS(SELECT 1 FROM sys.extended_properties p WHERE p.major_id = @ObjectId_${objectIdNoiceStr} AND p.minor_id = 0 AND p.class = 1)
 BEGIN
-  EXEC sys.sp_dropextendedproperty ${COMMENT_EXTEND_PROPERTY_NAME}, 'SCHEMA', @Schema, 'PROCEDURE', @Proc
+  EXEC sys.sp_dropextendedproperty ${COMMENT_EXTEND_PROPERTY_NAME}, 'SCHEMA', @Schema_${schemaNoiceStr}, '${type}', @Name_${nameNoiceStr}
 END
 `;
 
     if (comment) {
       sql += formatSql`
-EXEC sys.sp_addextendedproperty ${COMMENT_EXTEND_PROPERTY_NAME}, ${comment}, 'SCHEMA', @Schema, 'PROCEDURE', @Proc`;
+EXEC sys.sp_addextendedproperty ${COMMENT_EXTEND_PROPERTY_NAME}, ${comment}, 'SCHEMA', @Schema_${schemaNoiceStr}, '${type}', @Name_${nameNoiceStr}`;
     }
     return SQL.raw(sql);
+  }
+
+  setProcedureComment(
+    name: XObjectName,
+    comment: string | null
+  ): ExecutableStatement {
+    return this.setComment(name, 'PROCEDURE', comment);
   }
 
   setFunctionComment(
     name: XObjectName,
     comment: string | null
   ): ExecutableStatement {
-    let sql = formatSql`
--- MigrateBuilder.setFunctionComment(${this.sqlifier.sqlifyObjectName(
-      name
-    )}, ${comment});
-DECLARE @Schema VARCHAR(100), @Func VARCHAR(100), @ObjectId INT
-
-SELECT @ObjectId = o.object_id, @Schema = s.name, @Func = o.name
-FROM sys.objects o JOIN sys.schemas s ON o.schema_id = s.schema_id
-WHERE o.object_id = object_id(${this.sqlifier.sqlifyObjectName(name)})
-
-IF EXISTS(SELECT 1 FROM sys.extended_properties p WHERE p.major_id = @ObjectId AND p.minor_id = 0 AND p.class = 1)
-BEGIN
-  EXEC sys.sp_dropextendedproperty ${COMMENT_EXTEND_PROPERTY_NAME}, 'SCHEMA', @Schema, 'FUNCTION', @Func
-END
-`;
-
-    if (comment) {
-      sql += formatSql`
-EXEC sys.sp_addextendedproperty ${COMMENT_EXTEND_PROPERTY_NAME}, ${comment}, 'SCHEMA', @Schema, 'FUNCTION', @Func`;
-    }
-    return SQL.raw(sql);
+    return this.setComment(name, 'FUNCTION', comment);
   }
 
   setSequenceComment(
     name: XObjectName,
     comment: string | null
   ): ExecutableStatement {
-    let sql = formatSql`
--- MigrateBuilder.setSequenceComment(${this.sqlifier.sqlifyObjectName(
-      name
-    )}, ${comment});
-DECLARE @Schema VARCHAR(100), @Sequence VARCHAR(100), @ObjectId INT
-
-SELECT @ObjectId = o.object_id, @Schema = s.name, @Sequence = o.name
-FROM sys.objects o JOIN sys.schemas s ON o.schema_id = s.schema_id
-WHERE o.object_id = object_id(${this.sqlifier.sqlifyObjectName(name)})
-
-IF EXISTS(SELECT 1 FROM sys.extended_properties p WHERE p.major_id = @ObjectId AND p.minor_id = 0 AND p.class = 1)
-BEGIN
-  EXEC sys.sp_dropextendedproperty ${COMMENT_EXTEND_PROPERTY_NAME}, 'SCHEMA', @Schema, 'SEQUENCE', @Sequence
-END
-`;
-
-    if (comment) {
-      sql += formatSql`
-EXEC sys.sp_addextendedproperty ${COMMENT_EXTEND_PROPERTY_NAME}, ${comment}, 'SCHEMA', @Schema, 'SEQUENCE', @Sequence`;
-    }
-    return SQL.raw(sql);
+    return this.setComment(name, 'SEQUENCE', comment);
   }
 
   setTableComment(
     name: XObjectName,
     comment: string | null
   ): ExecutableStatement {
-    let sql = formatSql`
--- MigrateBuilder.setTableComment(${this.sqlifier.sqlifyObjectName(
-      name
-    )}, ${comment});
-DECLARE @Schema VARCHAR(100), @Table VARCHAR(100), @ObjectId INT
-
-SELECT @ObjectId = o.object_id, @Schema = s.name, @Table = o.name
-FROM sys.objects o JOIN sys.schemas s ON o.schema_id = s.schema_id
-WHERE o.object_id = object_id(${this.sqlifier.sqlifyObjectName(name)})
-
-IF EXISTS(SELECT 1 FROM sys.extended_properties p WHERE p.major_id = @ObjectId AND p.minor_id = 0 AND p.class = 1)
-BEGIN
-  EXEC sys.sp_dropextendedproperty ${COMMENT_EXTEND_PROPERTY_NAME}, 'SCHEMA', @Schema, 'TABLE', @Table
-END
-`;
-
-    if (comment) {
-      sql += formatSql`
-EXEC sys.sp_addextendedproperty ${COMMENT_EXTEND_PROPERTY_NAME}, ${comment}, 'SCHEMA', @Schema, 'TABLE', @Table`;
-    }
-    return SQL.raw(sql);
+    return this.setComment(name, 'TABLE', comment);
   }
 
   setViewComment(
     name: XObjectName,
     comment: string | null
   ): ExecutableStatement {
-    let sql = formatSql`
--- MigrateBuilder.setViewComment(${this.sqlifier.sqlifyObjectName(
-      name
-    )}, ${comment});
-DECLARE @Schema VARCHAR(100), @View VARCHAR(100), @ObjectId INT
-
-SELECT @ObjectId = o.object_id, @Schema = s.name, @View = o.name
-FROM sys.objects o JOIN sys.schemas s ON o.schema_id = s.schema_id
-WHERE o.object_id = object_id(${this.sqlifier.sqlifyObjectName(name)})
-
-IF EXISTS(SELECT 1 FROM sys.extended_properties p WHERE p.major_id = @ObjectId AND p.minor_id = 0 AND p.class = 1)
-BEGIN
-  EXEC sys.sp_dropextendedproperty ${COMMENT_EXTEND_PROPERTY_NAME}, 'SCHEMA', @Schema, 'VIEW', @View
-END
-`;
-
-    if (comment) {
-      sql += formatSql`
-EXEC sys.sp_addextendedproperty ${COMMENT_EXTEND_PROPERTY_NAME}, ${comment}, 'SCHEMA', @Schema, 'VIEW', @View`;
-    }
-    return SQL.raw(sql);
+    return this.setComment(name, 'VIEW', comment);
   }
-
-  setColumnComment(
-    table: XObjectName,
-    name: string,
-    comment: string | null
-  ): ExecutableStatement {
-    let sql = formatSql`
--- MigrateBuilder.setColumnComment(${this.sqlifier.sqlifyObjectName(
-      table
-    )}, ${name}, ${comment});
-DECLARE @Schema VARCHAR(100), @Table VARCHAR(100), @ObjectId INT, @Column VARCHAR(100)
-
-SET @Column = ${name}
-
-SELECT @ObjectId = o.object_id, @Schema = s.name, @Table = o.name
-FROM sys.objects o JOIN sys.schemas s ON o.schema_id = s.schema_id
-WHERE o.object_id = object_id(${this.sqlifier.sqlifyObjectName(table)})
-
-IF EXISTS(SELECT 1
-  FROM sys.extended_properties p INNER JOIN
-  sys.columns c ON p.major_id = c.object_id AND p.minor_id = c.column_id
-  WHERE c.object_id = @ObjectId AND c.name = @Column AND p.class = 1)
-BEGIN
-  EXEC sys.sp_dropextendedproperty ${COMMENT_EXTEND_PROPERTY_NAME}, 'SCHEMA', @Schema, 'TABLE', @Table, 'COLUMN', @Column
-END
-`;
-
-    if (comment) {
-      sql += formatSql`
-EXEC sys.sp_addextendedproperty ${COMMENT_EXTEND_PROPERTY_NAME}, ${comment}, 'SCHEMA', @Schema, 'TABLE', @Table, 'COLUMN', @Column`;
-    }
-    return SQL.raw(sql);
-  }
-
   setIndexComment(
     table: XObjectName,
     name: string,
     comment: string | null
   ): ExecutableStatement {
-    let sql = formatSql`
--- MigrateBuilder.setIndexComment(${this.sqlifier.sqlifyObjectName(
-      table
-    )}, ${name}, ${comment});
-DECLARE @Schema VARCHAR(100), @Table VARCHAR(100), @ObjectId INT, @Index VARCHAR(100)
-
-SET @Index = ${name}
-
-SELECT @ObjectId = o.object_id, @Schema = s.name, @Table = o.name
-FROM sys.objects o JOIN sys.schemas s ON o.schema_id = s.schema_id
-WHERE o.object_id = object_id(${this.sqlifier.sqlifyObjectName(table)})
-
-IF EXISTS(SELECT 1
-  FROM sys.extended_properties p INNER JOIN
-  sys.indexes i ON p.major_id = i.object_id AND p.minor_id = i.index_id
-  WHERE i.object_id = @ObjectId AND i.name = @Index AND p.class = 1)
-BEGIN
-  EXEC sys.sp_dropextendedproperty ${COMMENT_EXTEND_PROPERTY_NAME}, 'SCHEMA', @Schema, 'TABLE', @Table, 'INDEX', @Index
-END
-`;
-
-    if (comment) {
-      sql += formatSql`
-EXEC sys.sp_addextendedproperty ${COMMENT_EXTEND_PROPERTY_NAME}, ${comment}, 'SCHEMA', @Schema, 'TABLE', @Table, 'INDEX', ${name}`;
-    }
-    return SQL.raw(sql);
+    return this.setComment(name, 'INDEX', comment);
   }
 
   setConstraintComment(
@@ -495,50 +326,7 @@ EXEC sys.sp_addextendedproperty ${COMMENT_EXTEND_PROPERTY_NAME}, ${comment}, 'SC
     name: string,
     comment: string | null
   ): ExecutableStatement {
-    let sql = formatSql`
--- MigrateBuilder.setConstraintComment(${this.sqlifier.sqlifyObjectName(
-      table
-    )}, ${name}, ${comment});
-DECLARE @Schema VARCHAR(100), @Table VARCHAR(100), @ObjectId INT, @Constraint VARCHAR(100)
-
-SET @Constraint = ${name}
-
-SELECT @ObjectId = o.object_id, @Schema = s.name, @Table = o.name
-FROM sys.objects o JOIN sys.schemas s ON o.schema_id = s.schema_id
-WHERE o.object_id = object_id(${this.sqlifier.sqlifyObjectName(table)})
-
-IF EXISTS(
-  SELECT 1
-  FROM sys.extended_properties p INNER JOIN
-  sys.check_constraints c ON p.major_id = c.object_id AND p.minor_id = 0
-  WHERE c.parent_object_id = @ObjectId AND c.name = @Constraint AND p.class = 1
-  UNION ALL
-  SELECT 1
-  FROM sys.extended_properties p INNER JOIN
-  sys.default_constraints c ON p.major_id = c.object_id AND p.minor_id = 0
-  WHERE c.parent_object_id = @ObjectId AND c.name = @Constraint AND p.class = 1
-  UNION ALL
-  SELECT 1
-  FROM sys.extended_properties p INNER JOIN
-  sys.key_constraints c ON p.major_id = c.object_id AND p.minor_id = 0
-  WHERE c.parent_object_id = @ObjectId AND c.name = @Constraint AND p.class = 1
-  UNION ALL
-  SELECT 1
-  FROM sys.extended_properties p INNER JOIN
-  sys.foreign_keys c ON p.major_id = c.object_id AND p.minor_id = 0
-  WHERE c.parent_object_id = @ObjectId AND c.name = @Constraint AND p.class = 1
-)
-BEGIN
-  EXEC sys.sp_dropextendedproperty ${COMMENT_EXTEND_PROPERTY_NAME}, 'SCHEMA', @Schema, 'TABLE', @Table, 'CONSTRAINT', @Constraint
-END
-`;
-
-    if (comment) {
-      sql += formatSql`
-EXEC sys.sp_addextendedproperty ${COMMENT_EXTEND_PROPERTY_NAME}, ${comment}, 'SCHEMA', @Schema, 'TABLE', @Table, 'CONSTRAINT', @Constraint;
-`;
-    }
-    return SQL.raw(sql);
+    return this.setComment(name, 'CONSTRAINT', comment);
   }
 
   setSchemaComment(name: string, comment: string | null): ExecutableStatement {
@@ -557,6 +345,44 @@ END
     if (comment) {
       sql += formatSql`
 EXEC sp_addextendedproperty ${COMMENT_EXTEND_PROPERTY_NAME}, ${comment}, 'SCHEMA', ${name};`;
+    }
+    return SQL.raw(sql);
+  }
+
+
+  setColumnComment(
+    table: XObjectName,
+    name: string,
+    comment: string | null
+  ): ExecutableStatement {
+    const schemaNoiceStr = defaultGenerator.generateSync();
+    const tableNoiceStr = defaultGenerator.generateSync();
+    const columnNoiceStr = defaultGenerator.generateSync();
+    const objectIdNoiceStr = defaultGenerator.generateSync();
+    let sql = formatSql`
+-- MigrateBuilder.setColumnComment(${this.sqlifier.sqlifyObjectName(
+      table
+    )}, ${name}, ${comment});
+DECLARE @Schema_${schemaNoiceStr} VARCHAR(100), @Table_${tableNoiceStr} VARCHAR(100), @ObjectId_${objectIdNoiceStr} INT, @Column_${columnNoiceStr} VARCHAR(100)
+
+SET @Column_${columnNoiceStr} = ${name}
+
+SELECT @ObjectId_${objectIdNoiceStr} = o.object_id, @Schema${schemaNoiceStr} = s.name, @Table_${tableNoiceStr} = o.name
+FROM sys.objects o JOIN sys.schemas s ON o.schema_id = s.schema_id
+WHERE o.object_id = object_id(${this.sqlifier.sqlifyObjectName(table)})
+
+IF EXISTS(SELECT 1
+  FROM sys.extended_properties p INNER JOIN
+  sys.columns c ON p.major_id = c.object_id AND p.minor_id = c.column_id
+  WHERE c.object_id = @ObjectId_${objectIdNoiceStr} AND c.name = @Column_${columnNoiceStr} AND p.class = 1)
+BEGIN
+  EXEC sys.sp_dropextendedproperty ${COMMENT_EXTEND_PROPERTY_NAME}, 'SCHEMA', @Schema${schemaNoiceStr}, 'TABLE', @Table_${tableNoiceStr}, 'COLUMN', @Column_${columnNoiceStr}
+END
+`;
+
+    if (comment) {
+      sql += formatSql`
+EXEC sys.sp_addextendedproperty ${COMMENT_EXTEND_PROPERTY_NAME}, ${comment}, 'SCHEMA', @Schema${schemaNoiceStr}, 'TABLE', @Table_${tableNoiceStr}, 'COLUMN', @Column_${columnNoiceStr}`;
     }
     return SQL.raw(sql);
   }
