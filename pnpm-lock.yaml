@@ -12,8 +12,8 @@ importers:
         specifier: ^7.2.1-jover.9
         version: 7.2.1-jover.9
       lubejs:
-        specifier: file:/mnt/d/workspace/@jover/lubejs/lubejs/dist/lubejs-3.0.0-preview08.tgz
-        version: file:../lubejs/dist/lubejs-3.0.0-preview08.tgz(@types/node@14.17.9)(typescript@6.0.3)
+        specifier: file:/mnt/d/workspace/@jover/lubejs/lubejs/dist/lubejs-3.0.0-rc.1.tgz
+        version: file:../lubejs/dist/lubejs-3.0.0-rc.1.tgz(@types/node@14.17.9)(typescript@6.0.3)
       snowflake-id-node:
         specifier: ^4.0.1
         version: 4.0.1
@@ -923,9 +923,9 @@ packages:
   lodash@4.18.1:
     resolution: {integrity: sha512-dMInicTPVE8d1e5otfwmmjlxkZoUpiVLwyeTdUsi/Caj/gfzzblBcCE5sRHV/AsjuCmxWrte2TNGSYuCeCq+0Q==}
 
-  lubejs@file:../lubejs/dist/lubejs-3.0.0-preview08.tgz:
-    resolution: {integrity: sha512-I4nndXfbZkJi21vdo0mwWdU1CVwxJ3i0CjE7BBe8Qdkmt5ZbHAwLOedrM0eAX2VF8LfSgD35KzZ2L8tX81Z1Tw==, tarball: file:../lubejs/dist/lubejs-3.0.0-preview08.tgz}
-    version: 3.0.0-preview08
+  lubejs@file:../lubejs/dist/lubejs-3.0.0-rc.1.tgz:
+    resolution: {integrity: sha512-my/LKaFCmSeuMlLbSh59SojX+EmVFHBvbwHjU5wyefbXQF+ZxP4hyhhAlm/kjujy+VVlu5OhHJIzsnYDjaJNiQ==, tarball: file:../lubejs/dist/lubejs-3.0.0-rc.1.tgz}
+    version: 3.0.0-rc.1
     engines: {node: '>=12.0'}
     hasBin: true
 
@@ -2313,7 +2313,7 @@ snapshots:
 
   lodash@4.18.1: {}
 
-  lubejs@file:../lubejs/dist/lubejs-3.0.0-preview08.tgz(@types/node@14.17.9)(typescript@6.0.3):
+  lubejs@file:../lubejs/dist/lubejs-3.0.0-rc.1.tgz(@types/node@14.17.9)(typescript@6.0.3):
     dependencies:
       colors: 1.4.0
       commander: 7.2.0

@@ -1,6 +1,6 @@
 {
   "name": "lubejs-mssql",
-  "version": "3.0.0-preview08",
+  "version": "3.0.0-rc.1",
   "description": "The lubejs driver for mssql.",
   "main": "index.js",
   "engines": {
@@ -29,7 +29,7 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@jovercao/mssql": "^7.2.1-jover.9",
-    "lubejs": "file:/mnt/d/workspace/@jover/lubejs/lubejs/dist/lubejs-3.0.0-preview08.tgz",
+    "lubejs": "file:/mnt/d/workspace/@jover/lubejs/lubejs/dist/lubejs-3.0.0-rc.1.tgz",
     "snowflake-id-node": "^4.0.1"
   },
   "devDependencies": {
